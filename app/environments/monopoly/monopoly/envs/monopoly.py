@@ -63,7 +63,7 @@ class MonopolyEnv(gym.Env):
             player_array[i, 0] = player.playerNum/num_players
             player_array[i, 1] = ((2 * player.diceroll)/12)-1
             player_array[i, 1] = player.rollingdoubles/3
-            player_array[i, 2] = player.position/40
+            player_array[i, 2] = ((2 * player.position)/40)-1
             player_array[i, 3] = int(player.turn)
             player_array[i, 4] = ((2 * player.cash)/max_price_scale) -1
             player_array[i, 5] = int(player.jail)
@@ -81,7 +81,7 @@ class MonopolyEnv(gym.Env):
         for i, property in enumerate(self.properties):
             # Update property features
             property_array[i, 0] = property.pieceType/num_players if property.occupied == True else -1
-            property_array[i, 1] = self.board.index(property)
+            property_array[i, 1] = ((2 * self.board.index(property))/40 ) -1
             property_array[i, 2] = ((2 * property.color)/7) - 1
             property_array[i, 3] = ((2 * property.price) / max_price_scale) -1
             property_array[i, 4] = ((2 * property.rent) / max_price_scale) -1
@@ -99,7 +99,7 @@ class MonopolyEnv(gym.Env):
         for i, railroad in enumerate(self.railroads):
             # Update railroad features
             railroad_array[i, 0] = railroad.pieceType/num_players if railroad.occupied == True else -1
-            railroad_array[i, 1] = self.board.index(railroad)
+            railroad_array[i, 1] = ((2 * self.board.index(railroad))/40 ) -1
             railroad_array[i, 2] = ((2 * railroad.price)/max_price_scale) -1
             railroad_array[i, 3] = ((2 * railroad.rent)/max_price_scale) -1
             railroad_array[i, 4] = ((2 * property.totalRailroad)/4) -1
@@ -110,7 +110,7 @@ class MonopolyEnv(gym.Env):
         for i, utility in enumerate(self.utilities):
             # Update utility features
             utility_array[i, 0] = utility.pieceType/num_players if utility.occupied == True else -1
-            utility_array[i, 1] = self.board.index(utility)
+            utility_array[i, 1] = ((2 * self.board.index(utility))/40) -1
             utility_array[i, 2] = ((2 * utility.price)/max_price_scale) -1
             utility_array[i, 3] = int(property.utilities)
     ########### rents ok?
