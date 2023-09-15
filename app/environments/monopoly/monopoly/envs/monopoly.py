@@ -43,54 +43,80 @@ class MonopolyEnv(gym.Env):
     @property
     def observation(self):
     # Create an observation space representing the state of the Monopoly game
-    num_property_features = 7  # Number of property-related features
+    num_property_features = 12  # Number of property-related features
+    num_railroads_features = 5  # Number of features for railroads
+    num_utilities_features = 4  # Number of features for utilities
+    num_player_features = 13  # Number of player-related features
 
     num_players = len(self.players)
     num_properties = len(self.properties)
+    num_railroads = len(self.railroads)
+    num_utilities = len(self.utilities)
+
     max_price_scale = 1e6  # Choose a very large value as the max price scale
-    observation = np.zeros((num_features,), dtype=float)
 
-    # Set player positions on the board
-    for player in self.players:
-        player_position = player.get_position()  # Define a get_position method for Player class
-        observation[player_position * 2 + player.id - 1] = player.token.number
+    # Create the player array with zeros
+    player_array = np.zeros((num_players, num_player_features), dtype=float)
+    # Update the player array for each player
+    for i, player in enumerate(self.players):
+        # Update player features
+        player_array[i, 0] = player.playerNum/num_players
+        player_array[i, 1] = ((2 * player.diceroll)/12)-1
+        player_array[i, 1] = player.rollingdoubles/3
+        player_array[i, 2] = player.position/40
+        player_array[i, 3] = int(player.turn)
+        player_array[i, 4] = ((2 * player.cash)/max_price_scale) -1
+        player_array[i, 5] = int(player.jail)
+        player_array[i, 6] = player.dicejail/3
+        player_array[i, 7] = int(player.wasjailed)
+        player_array[i, 8] = ((2 * player.houseNum)/32) -1
+        player_array[i, 9] = ((player.hotelNum)/12) -1
+        player_array[i, 10] = player.railroadNum/4
+        player_array[i, 11] = player.utilitiesNum/2
+        player_array[i, 12] = int(player.freeJail)
 
+    # Create the property array with zeros
+    property_array = np.zeros((num_properties, num_property_features), dtype=float)
     # Add property-related information
-    for property_index, property_info in enumerate(self.properties):
-        owner = property_info.get("pieceType", None)
-        is_mortgaged = property_info.get("mortgaged", False)
+    for i, property in enumerate(self.properties):
+        # Update property features
+        property_array[i, 0] = property.pieceType/num_players if property.occupied == True else -1
+        property_array[i, 1] = self.board.index(property)
+        property_array[i, 2] = ((2 * property.color)/7) - 1
+        property_array[i, 3] = ((2 * property.price) / max_price_scale) -1
+        property_array[i, 4] = ((2 * property.rent) / max_price_scale) -1
+        property_array[i, 5] = (2 * property.house / 4) -1
+        property_array[i, 6] = property.hotel
+        property_array[i, 7] = ((2 * property.househotelCosts)/max_price_scale) -1
+        property_array[i, 8] = int(property.colorset)
+        property_array[i, 9] = int(property.mortgaged)
+        property_array[i, 10] = ((2 * property.mortgagedprice)/max_price_scale) -1
+        property_array[i, 11] = ((2 * property.mortgagedPayPrice)/max_price_scale) -1
 
-        observation_idx = self.num_squares * 2 + property_index * num_property_features
+    # Create the railroad array with zeros
+    railroad_array = np.zeros((num_railroads, num_railroads_features), dtype=float)
+    # Add railroad-related information
+    for i, railroad in enumerate(self.railroads):
+        # Update railroad features
+        railroad_array[i, 0] = railroad.pieceType/num_players if railroad.occupied == True else -1
+        railroad_array[i, 1] = self.board.index(railroad)
+        railroad_array[i, 2] = ((2 * railroad.price)/max_price_scale) -1
+        railroad_array[i, 3] = ((2 * railroad.rent)/max_price_scale) -1
+        railroad_array[i, 4] = ((2 * property.totalRailroad)/4) -1
 
-        # Set color (assuming color is represented as an integer)
-        observation[observation_idx] = (2 * property_info["color"] / num_colors) - 1
-        # Set property price (scaled)
-        observation[observation_idx + 1] = (2 * property_info["price"] / max_price_scale) - 1
-        # Set current rent (scaled)
-        observation[observation_idx + 2] = (2 * property_info["rent"] / max_price_scale) - 1
-        # Set owner (0 if unowned)
-        observation[observation_idx + 3] = (2 * (owner.token.number if owner is not None else 0) / num_players) - 1
-        # Set mortgage price (scaled)
-        observation[observation_idx + 4] = (2 * property_info["mortgageprice"] / max_price_scale) - 1
-        # Set whether it is mortgaged or not
-        observation[observation_idx + 5] = 2 * int(is_mortgaged) - 1
-        # Set property index (for reference)
-        observation[observation_idx + 6] = (2 * property_index / num_properties) - 1
+    # Create the utility array with zeros
+    utility_array = np.zeros((num_utilities, num_utilities_features), dtype=float)
+    # Add utility-related information
+    for i, utility in enumerate(self.utilities):
+        # Update utility features
+        utility_array[i, 0] = utility.pieceType/num_players if utility.occupied == True else -1
+        utility_array[i, 1] = self.board.index(utility)
+        utility_array[i, 2] = ((2 * utility.price)/max_price_scale) -1
+        utility_array[i, 3] = int(property.utilities)
+########### rents ok?
 
-    # Add player-related information
-    for player in self.players:
-        player_id = player.id - 1
-        observation_idx = self.num_squares * 2 + num_property_features * num_properties + player_id * 5  # +5 for the new feature
-        # Player's current cash (scaled)
-        observation[observation_idx] = (2 * player.cash / max_price_scale) - 1
-        # Whether they went to jail in this round
-        observation[observation_idx + 1] = 2 * int(player.wasJailed) - 1
-        # Whether they are currently in jail
-        observation[observation_idx + 2] = 2 * int(player.jail) - 1
-        # Whether the player has a "Get Out of Jail Free" card
-        observation[observation_idx + 3] = 2 * int(player.freeJail) - 1
-        # Number of times the player has chosen to roll doubles to get out of jail free
-        observation[observation_idx + 4] =  ((player.diceJail + 1 ) / 2) -1
+    # Concatenate the arrays into the observation
+    observation = np.concatenate((player_array.flatten(), property_array.flatten(), railroad_array.flatten(), utility_array.flatten()))
 
     return observation
 
