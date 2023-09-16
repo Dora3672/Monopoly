@@ -126,32 +126,59 @@ class MonopolyEnv(gym.Env):
         current_player = self.current_player
         legal_actions = []
 
+        # if in jail, only one subarray
+        if current_player.jail == True and current_player.diceJail < 3:
+                ### -1 free jail card, 0 roll dice, 1 pay
+                legal_actions.append([-1, 0, 1] if current_player.freeJail == True else [0, 1])
         # Iterate through properties
-        for property_index, property_info in enumerate(self.properties):
-            owner = property_info.get("owner", None)
-            is_mortgaged = property_info.get("mortgaged", False)
-            price = property_info.get("price", 0)
-            house_price = property_info.get("househotelCosts", 0)
-            hotel_count = property_info.get("hotel", 0)
+        else:
+            ######### should i add more for the action to check for money? not asked to buy if not enough money
+            for index, tile in enumerate(self.board):
+                # railroads
+                tile_action = []
+                if index in [5, 15, 25, 35]:
+                    if tile.occupied == False:
+                        # 1/6 not buy railroad, 1/3 buy railroad
+                        tile_aciton.append(1/6)
+                        tile_action.append(1/3)
+                    else:
+                        # 0 do nothing
+                        tile_action.append(0)
+                # utilities
+                elif index in [12, 28]:
+                    if tile.occupied == False:
+                        # 1/6 not buy utility, 1/3 buy utility
+                        tile_aciton.append(1/6)
+                        tile_action.append(1/3)
+                    else:
+                        # 0 do nothing
+                        tile_action.append(0)
+                # properties
+                elif index in [1,3,6,7,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]:
+                    if tile.occupied == False:
+                        # 1/6 not buy property, 1/3 buy property
+                        tile_aciton.append(1/6)
+                        tile_action.append(1/3)
+                    elif tile.pieceType == current_player.playerSymbol:
+                        if tile.mortgaged == False and tile.houseNum < 4:
+                            # 1/2 not buy house, 2/3 buy house
+                            tile_action.append(0.5)
+                            tile_action.append(2/3)
+                        elif tile.mortgaged == False and tile.houseNum == 4 and tile.hotelNum == 0:
+                            # 5/6 not buy hotel, 1 buy house
+                            tile_action.append(5/6)
+                            tile_action.append(1)
+                        elif tile.mortgaged == True:
+                            # -0.5 not buy property back, -1 buy back
+                            tile_action.append(-0.5)
+                            tile_action.append(-1)
+                    else:
+                        # 0 do nothing
+                        tile_action.append(0)
+                ########## if no action can be done on that tile, an empty array is added? 
+                
 
-            # Buy the property if it's unowned and the player has enough cash
-            if owner is None and current_player.cash >= price:
-                legal_actions.append(1.0)  # Buy Property
-
-            # Buy back the property if it's mortgaged and the player has enough cash
-            if owner == current_player.id and is_mortgaged and current_player.cash >= price:
-                legal_actions.append(0.8)  # Buy Back Property
-
-            # Buy an additional house if the property is owned by the player and not at max houses
-            if owner == current_player.id and house_price > 0 and hotel_count == 0 and current_player.cash >= house_price:
-                legal_actions.append(0.6)  # Buy House on Property
-
-            # Buy a hotel if the property is owned by the player, has 4 houses, no hotels, and enough cash
-            if owner == current_player.id and hotel_count == 0 and current_player.cash >= house_price:
-                legal_actions.append(0.5)  # Buy Hotel on Property
-
-        # Append a "Do Nothing" action
-        legal_actions.append(-1.0)  # Do Nothing
+                legal_actions.append(tile_action)
 
         return legal_actions
 
