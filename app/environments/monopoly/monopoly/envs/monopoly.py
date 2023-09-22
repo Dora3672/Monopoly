@@ -113,7 +113,6 @@ class MonopolyEnv(gym.Env):
             utility_array[i, 1] = ((2 * self.board.index(utility))/40) -1
             utility_array[i, 2] = ((2 * utility.price)/max_price_scale) -1
             utility_array[i, 3] = int(property.utilities)
-    ########### rents ok?
 
         # Concatenate the arrays into the observation
         observation = np.concatenate((player_array.flatten(), property_array.flatten(), railroad_array.flatten(), utility_array.flatten()))
@@ -125,60 +124,42 @@ class MonopolyEnv(gym.Env):
     def legal_actions(self):
         current_player = self.current_player
         legal_actions = []
-
-        # if in jail, only one subarray
-        if current_player.jail == True and current_player.diceJail < 3:
-                ### -1 free jail card, 0 roll dice, 1 pay
-                legal_actions.append([-1, 0, 1] if current_player.freeJail == True else [0, 1])
+        
         # Iterate through properties
-        else:
-            ######### should i add more for the action to check for money? not asked to buy if not enough money
-            for index, tile in enumerate(self.board):
-                # railroads
-                tile_action = []
-                if index in [5, 15, 25, 35]:
-                    if tile.occupied == False:
-                        # 1/6 not buy railroad, 1/3 buy railroad
-                        tile_aciton.append(1/6)
-                        tile_action.append(1/3)
-                    else:
-                        # 0 do nothing
+        for index, tile in enumerate(self.board):
+            # railroads
+            tile_action = []
+            if index in [10]:
+                # jail
+                # roll dice, pay
+                legal_actions.append([1,1] if ((current_player.jail == True) and (current_player.diceJail < 3)) else [0,0])
+            elif index in [5, 15, 25, 35]:
+                # buy railroad
+                tile_action.append(1 if tile.occupied == False else 0)
+            # utilities
+            elif index in [12, 28]:
+                # buy utilities
+                tile_action.append(1 if tile.occupied == False else 0)
+            # properties
+            elif index in [1,3,6,7,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]:
+                # buy property
+                tile_action.append(1 if tile.occupied == False else 0)
+                if tile.pieceType == current_player.playerSymbol:
+                    if tile.mortgaged == False:
+                        # buy house
+                        tile_action.append(1 if tile.houseNum<4 else 0)
+                        # buy hotel
+                        tile_action.append(1 if ((tile.houseNum == 4) and (tile.hotelNum == 0)) else 0)
+                        # buy back
                         tile_action.append(0)
-                # utilities
-                elif index in [12, 28]:
-                    if tile.occupied == False:
-                        # 1/6 not buy utility, 1/3 buy utility
-                        tile_aciton.append(1/6)
-                        tile_action.append(1/3)
                     else:
-                        # 0 do nothing
-                        tile_action.append(0)
-                # properties
-                elif index in [1,3,6,7,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]:
-                    if tile.occupied == False:
-                        # 1/6 not buy property, 1/3 buy property
-                        tile_aciton.append(1/6)
-                        tile_action.append(1/3)
-                    elif tile.pieceType == current_player.playerSymbol:
-                        if tile.mortgaged == False and tile.houseNum < 4:
-                            # 1/2 not buy house, 2/3 buy house
-                            tile_action.append(0.5)
-                            tile_action.append(2/3)
-                        elif tile.mortgaged == False and tile.houseNum == 4 and tile.hotelNum == 0:
-                            # 5/6 not buy hotel, 1 buy house
-                            tile_action.append(5/6)
-                            tile_action.append(1)
-                        elif tile.mortgaged == True:
-                            # -0.5 not buy property back, -1 buy back
-                            tile_action.append(-0.5)
-                            tile_action.append(-1)
-                    else:
-                        # 0 do nothing
-                        tile_action.append(0)
-                ########## if no action can be done on that tile, an empty array is added? 
-                
+                        tile_action.append([0,0,1])
+                else:
+                    tile_action.append([0,0,0])
+                ######## only land on the tile can do the action? should add that and else 0?
 
                 legal_actions.append(tile_action)
+                ####### add empty array or nothing
 
         return legal_actions
 
