@@ -6,8 +6,22 @@ import config
 
 from stable_baselines import logger
 
+import random
 
 from array import *
+
+class Dice:
+  def __init__(self):
+    self.min=1
+    self.max=6
+    self.currentnum=random.randint(self.min,self.max)
+
+  def randomnum(self):
+    self.currentnum=random.randint(self.min,self.max)
+    return self.currentnum
+
+  def __str__(self):
+    return str(self.currentnum)
 
 class Player:
   def __init__(self, symbol, name):
@@ -184,7 +198,7 @@ class Player:
   def setFreeJail(self):
     self.freeJail = not self.freeJail
     
-    
+
 
 class MonopolyEnv(gym.Env):
     metadata = {'render.modes': ['human']}
@@ -390,14 +404,91 @@ class MonopolyEnv(gym.Env):
 
 #         return self.observation, reward, done, {}
 
-#     def reset(self):
-#         self.board = [Token('.', 0)] * self.num_squares
-#         self.players = [Player('1', Token('X', 1)), Player('2', Token('O', -1))]
-#         self.current_player_num = 0
-#         self.turns_taken = 0
-#         self.done = False
-#         logger.debug(f'\n\n---- NEW GAME ----')
-#         return self.observation
+
+    def reset(self):
+        # reset board
+        self.mAvenue = PropertyTile(0, 60)
+        self.bAvenue = PropertyTile(0, 60)
+        self.oAvenue = PropertyTile(1, 100)
+        self.verAvenue = PropertyTile(1, 100)
+        self.cAvenue = PropertyTile(1, 120)
+        self.sCPlace = PropertyTile(2, 140)
+        self.sAvenue = PropertyTile(2, 140)
+        self.viAvenue = PropertyTile(2, 160)
+        self.sJPlace = PropertyTile(3, 180)
+        self.tAvenue = PropertyTile(3, 180)
+        self.nYAvenue = PropertyTile(3, 200)
+        self.kAvenue = PropertyTile(4, 220)
+        self.inAvenue = PropertyTile(4, 220)
+        self.ilAvenue = PropertyTile(4, 240)
+        self.aAvenue = PropertyTile(5, 260)
+        self.venAvenue = PropertyTile(5, 260)
+        self.mGardens = PropertyTile(5, 280)
+        self.paAvenue = PropertyTile(6, 300)
+        self.nCAvenue = PropertyTile(6, 300)
+        self.peAvenue = PropertyTile(6, 320)
+        self.pPlace = PropertyTile(7, 350)
+        self.bw = PropertyTile(7, 400)
+        self.properties = [self.mAvenue, self.bAvenue,
+                        self.oAvenue, self.verAvenue, self.cAvenue,
+                        self.sCPlace, self.sAvenue, self.viAvenue,
+                        self.sJPlace, self.tAvenue, self.nYAvenue,
+                        self.kAvenue, self.inAvenue, self.ilAvenue,
+                        self.aAvenue, self.venAvenue, self.mGardens,
+                        self.paAvenue, self.nCAvenue, self.peAvenue,
+                        self.pPlace, self.bw]
+        self.boardnames = ['Pass Go! Collect 200', 'Mediterranean Avenue', 'Community Chest', 'Baltic Avenue', 'Income Tax', 'Reading Railroad', 'Oriental Avenue', 'Chance', 'Vermont Avenue', 'Connecticut Avenue',
+                        'Just Visiting', 'St. Charles Place', 'Electric Company', 'States Avenue', 'Virginia Avenue', 'Pennsylvania Railroad', 'St. James Place', 'Community Chest', 'Tennessee Avenue', 'New York Avenue',
+                        'Free Parking', 'Kentucky Avenue', 'Chance', 'Indiana Avenue', 'Illinois Avenue', 'B&O Railroad', 'Atlantic Avenue', 'Ventor Avenue', 'Water Works', 'Marvin Gardens',
+                        'Go to Jail!', 'Pacific Avenue', 'North Carolina Avenue', 'Community Chest', 'Pennsylvania Avenue', 'Short Line', 'Chance', 'Park Place', 'Luxury Tax', 'Boardwalk']
+        self.propertynames = ["Mediterranean Avenue", "Baltic Avenue",
+                            "Oriental Avenue", "Vermont Avenue", "Connecticut Avenue",
+                            "St. Charles Place", "States Avenue", "Virginia Avenue",
+                            "St. James Place", "Tennessee Avenue", "New York Avenue",
+                            "Kentucky Avenue", "Indiana Avenue", "Illinois Avenue",
+                            "Atlantic Avenue", "Ventnor Avenue", "Marvin Gardens",
+                            "Pacific Avenue", "North Carolina Avenue", "Pennsylvania Avenue",
+                            "Park Place", "Boardwalk"]
+        self.colors = ['brown', 'light_blue', 'purple', 'orange', 'red', 'yellow', 'green', 'dark_blue']
+        self.sets = [[self.mAvenue, self.bAvenue],
+                    [self.oAvenue, self.verAvenue, self.cAvenue],
+                    [self.sCPlace, self.sAvenue, self.viAvenue],
+                    [self.sJPlace, self.tAvenue, self.nYAvenue],
+                    [self.kAvenue, self.inAvenue, self.ilAvenue],
+                    [self.aAvenue, self.venAvenue, self.mGardens],
+                    [self.paAvenue, self.nCAvenue, self.peAvenue],
+                    [self.pPlace, self.bw]]
+
+        self.communityChest=CChestTile()
+        self.chance = chanceTile()
+        self.electricCompany = UtilityTile()
+        self.waterWorks = UtilityTile()
+        self.utilities = [self.electricCompany, self.waterWorks]
+        self.utilitynames = ["Electric Company", "Water Works"]
+        self.rRailroad = RailroadTile()
+        self.pRailroad = RailroadTile()
+        self.bRailroad = RailroadTile()
+        self.sLine = RailroadTile()
+        self.railroads = [self.rRailroad, self.pRailroad, self.bRailroad, self.sLine]
+        self.railroadnames = ["Reading Railroad", "Pennsylvania Railroad", "B&O Railroad", "Short Line"]
+
+        self.board = ['', self.mAvenue, self.communityChest, self.bAvenue, '', self.rRailroad, self.oAvenue, self.chance, self.verAvenue, self.cAvenue,
+                    '', self.sCPlace, self.electricCompany, self.sAvenue, self.viAvenue, self.pRailroad, self.sJPlace, self.communityChest, self.tAvenue, self. nYAvenue,
+                    '', self.kAvenue, self.chance, self.inAvenue, self.ilAvenue, self.bRailroad, self.aAvenue, self.venAvenue, self.waterWorks, self.mGardens,
+                    '', self.paAvenue, self.nCAvenue, self.communityChest, self.peAvenue, self.sLine, self.chance, self.pPlace, '', self.bw]
+
+
+        # players
+        #### Token????????
+        self.players = [Player(0, '1'), Player(1, '-1')]
+
+        self.current_player_num = 0
+        self.turns_taken = 0
+        self.done = False
+        ##### turns_taken & done needed?
+        logger.debug(f'\n\n---- NEW GAME ----')
+        return self.observation
+
 
 
 #     def render(self, mode='human', close=False, verbose = True):
