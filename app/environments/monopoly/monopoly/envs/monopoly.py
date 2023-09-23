@@ -7,17 +7,183 @@ import config
 from stable_baselines import logger
 
 
-class Player():
-    def __init__(self, id, token):
-        self.id = id
-        self.token = token
-        
+from array import *
 
-class Token():
-    def __init__(self, symbol, number):
-        self.number = number
-        self.symbol = symbol
-        
+class Player:
+  def __init__(self, symbol, name):
+    self.position = 0  #position of the play on the board
+    self.rollingdoubles = 0
+    self.name = name
+    self.playerSymbol = symbol
+    self.turn = False
+    self.move = False  # move to a place due to c/cc
+    self.b = False  # pay for buying
+    self.cash = 1500 #starting cash
+    self.jail = False #whether the person is in jail or not
+    self.diceJail = 0 #number of times trying to roll doubles to get out of jail free
+    self.wasJailed = False #whether the person was in jail or not during the round
+    #whether the player owns the property or not
+    self.playerProperty = [[False, 0, 0], [False, 0, 0], #brown
+                           [False, 0, 0], [False, 0, 0], [False, 0, 0], #light blue
+                           [False, 0, 0], [False, 0, 0], [False, 0, 0], #purple
+                           [False, 0, 0], [False, 0, 0], [False, 0, 0], #orange
+                           [False, 0, 0], [False, 0, 0], [False, 0, 0], #red
+                           [False, 0, 0], [False, 0, 0], [False, 0, 0], #yellow
+                           [False, 0, 0], [False, 0, 0], [False, 0, 0], #green
+                           [False, 0, 0], [False, 0, 0]] #dark blue
+    self.houseNum = 0
+    self.hotelNum = 0
+    #whether the player owns the whole set or not
+    self.playerSets = {'brown':False, 'light_blue':False, 'purple':False, 'orange':False, 'red':False, 'yellow':False, 'green':False, 'dark_blue':False}
+    #whether the player owns the railroads
+    self.playerRailroad = [False, False, False, False]
+    self.railroadNum = 0
+    #whether the player owns the utilities
+    self.playerUtilities = [False, False]
+    self.utilitiesNum = 0
+    #whether the properties are mortgaged or not
+    self.mortgaged = [False, False, #brown
+                      False, False, False, #light blue
+                      False, False, False, #purple
+                      False, False, False, #orange
+                      False, False, False, #red
+                      False, False, False, #yellow
+                      False, False, False, #green
+                      False, False, #dark blue
+                      False, False, False, False, #railroads (order based on the order shown in Overview)
+                      False, False] #utilities (order based on the order shown in Overview)
+    self.freeJail = False #free out of jail
+
+  def getPosition(self):
+    return self.position
+
+  def checkPlayerTurn(self):
+    return self.isPlayerTurn
+
+  def getPlayerSymbol(self):
+    return self.playerSymbol
+
+  def getCash(self):
+    return self.cash
+
+  def getJail(self):
+    return self.jail
+
+  def getWasJailed(self):
+    return self.wasJailed
+
+  def getHouse(self, propertynum):
+    return self.playerProperty[propertynum][1]
+
+  def getHotel(self,propertynum):
+    return self.playerProperty[propertynum][2]
+
+  def getRailroadNum(self):
+    return self.railroadNum
+
+  def getUtilitiesNum(self):
+    return self.utilitiesNum
+
+  def getFreeJail(self):
+    return self.freeJail
+
+  def getHouseNum(self):
+    return self.houseNum
+
+  def getHotelNum(self):
+    return self.hotelNum
+
+  def getDiceJail(self):
+    return self.diceJail
+
+  def setDiceJail(self, count):
+    self.diceJail = count
+
+  def addPosition(self, movecount):
+    self.position += movecount
+    while self.position > 39:
+      self.position -= 40
+      self.passGo()
+
+  def setPosition(self, position):
+    # pass go
+    if self.position > position or position == 0:
+      self.passGo()
+    self.position = position
+
+
+  def passGo(self):
+    # if was not jailed
+    if self.wasJailed == False:
+      print("Pass Go! Collect 200")
+      self.earn(200)
+    # if jailed
+    else:
+      self.setWasJailed()
+
+  def setPlayerTurn(self):
+    self.isPlayerTurn = not self.isPlayerTurn
+
+  def addProperty(self, propertynum):
+    self.playerProperty[propertynum][0] = True
+    if self.playerProperty[0][0] == True and self.playerProperty[1][0] == True:
+      self.playerSets['brown'] = True
+    if self.playerProperty[2][0] == True and self.playerProperty[3][0] == True and self.playerProperty[4][0] == True:
+      self.playerSets['light_blue'] = True
+    if self.playerProperty[5][0] == True and self.playerProperty[6][0] == True and self.playerProperty[7][0] == True:
+      self.playerSets['purple'] = True
+    if self.playerProperty[8][0] == True and self.playerProperty[9][0] == True and self.playerProperty[10][0] == True:
+      self.playerSets['orange'] = True
+    if self.playerProperty[11][0] == True and self.playerProperty[12][0] == True and self.playerProperty[13][0] == True:
+      self.playerSets['red'] = True
+    if self.playerProperty[14][0] == True and self.playerProperty[15][0] == True and self.playerProperty[16][0] == True:
+      self.playerSets['yellow'] = True
+    if self.playerProperty[17][0] == True and self.playerProperty[18][0] == True and self.playerProperty[19][0] == True:
+      self.playerSets['green'] = True
+    if self.playerProperty[20][0] == True and self.playerProperty[21][0] == True:
+      self.playerSets['dark_blue'] = True
+
+  def addHouseHotel(self, propertynum):
+    if self.getHouse(propertynum) == 4:
+      self.playerProperty[propertynum][1] = 0
+      self.addHotel(propertynum)
+      self.houseNum -= 4
+    else:
+      self.playerProperty[propertynum][1] += 1
+      self.houseNum += 1
+
+  def addHotel(self, propertynum):
+    self.playerProperty[propertynum][2] += 1
+    self.hotelNum += 1
+
+  def addRailroad(self, railroadnum):
+    self.playerRailroad[railroadnum] = True
+    self.railroadNum += 1
+
+  def addUtilities(self, utilitynum):
+    self.playerUtilities[utilitynum] = True
+    self.utilitiesNum += 1
+
+  def earn(self, amount):
+    self.cash += amount
+    print(self.name, "current cash:", self.cash)
+
+  def setCash(self, amount):
+    self.cash = amount
+    print(self.name, "current cash:", self.cash)
+
+  def setJail(self):
+    self.jail = not self.jail
+
+  def setWasJailed(self):
+    self.wasJailed = not self.wasJailed
+
+  def setMortgaged(self, propertynum):
+    self.mortgaged[propertynum] = not self.mortgaged[propertynum]
+
+  def setFreeJail(self):
+    self.freeJail = not self.freeJail
+    
     
 
 class MonopolyEnv(gym.Env):
@@ -194,9 +360,9 @@ class MonopolyEnv(gym.Env):
 
 #         return 0, False
 
-#     @property
-#     def current_player(self):
-#         return self.players[self.current_player_num]
+    @property
+    def current_player(self):
+        return self.players[self.current_player_num]
 
 
 #     def step(self, action):
