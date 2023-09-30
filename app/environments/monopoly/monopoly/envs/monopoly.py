@@ -312,19 +312,19 @@ class MonopolyEnv(gym.Env):
             if index in [10]:
                 # jail
                 # roll dice, pay
-                legal_actions.append([1,1] if ((current_player.jail == True) and (current_player.diceJail < 3)) else [0,0])
-            elif index in [5, 15, 25, 35]:
+                legal_actions.append([1,1] if ((current_player.jail == True) and (current_player.diceJail < 3) and (current_player.position == 10)) else [0,0])
+            elif index in [5, 15, 25, 35] :
                 # buy railroad
-                tile_action.append(1 if tile.occupied == False else 0)
+                tile_action.append(1 if (tile.occupied == False and current_player.position in [5,15,25,35]) else 0)
             # utilities
             elif index in [12, 28]:
                 # buy utilities
-                tile_action.append(1 if tile.occupied == False else 0)
+                tile_action.append(1 if (tile.occupied == False and current_player.position in [12, 28]) else 0)
             # properties
             elif index in [1,3,6,7,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]:
                 # buy property
                 tile_action.append(1 if tile.occupied == False else 0)
-                if tile.pieceType == current_player.playerSymbol:
+                if tile.pieceType == current_player.playerSymbol and current_player.position == index:
                     if tile.mortgaged == False:
                         # buy house
                         tile_action.append(1 if tile.houseNum<4 else 0)
@@ -336,43 +336,51 @@ class MonopolyEnv(gym.Env):
                         tile_action.append([0,0,1])
                 else:
                     tile_action.append([0,0,0])
-                ######## only land on the tile can do the action? should add that and else 0?
 
                 legal_actions.append(tile_action)
-                ####### add empty array or nothing
 
         return legal_actions
 
 
 
 
-#     def square_is_player(self, square, player):
-#         return self.board[square].number == self.players[player].token.number
+    ######## add pieceType for all tile
+    def square_is_player(self, tile, player):
+        return self.board[tile].pieceType == self.players[player].playerSymbol
 
-#     def check_game_over(self):
+    def check_game_over(self):
+      winindex = [0]
+      winworth = [0]
+      for i in range(self.playerNum):
+        player = self.players[i]
+        ca = player.cash
+        for ii in range(len(self.properties)):
+          if player.mortgaged[ii] == False and player.playerProperty[ii][0] == True:
+            player.cash += self.properties[ii].price
+            if player.playerProperty[ii][1] != 0:
+              player.cash += (player.playerProperty[ii][1] + player.playerProperty[ii][2]) * self.properties[ii].househotelCosts
+        for ii in range(len(self.railroads)):
+          if player.playerRailroad[ii] == True:
+            player.cash += 200
+        for ii in range(len(self.utilities)):
+          if player.playerUtilities[ii] == True:
+            player.cash += 150
+        if winworth[0] < player.cash:
+          winindex = [i]
+          winworth = [player.cash]
+        elif winworth[0] == player.cash:
+          winindex.append(i)
+          winworth.append(player.cash)
+      
+      ###### which number is which version
+      winworthsorted = sorted(winworth)
+      if winworthsorted[0] <= 0 and len(winworth) == 1:
+        if self.players[winindex[0]] == '#### need to be added':
+          return 1, True
+        else:
+          return 0, True
+      return 0, False
 
-#         board = self.board
-#         current_player_num = self.current_player_num
-#         players = self.players
-
-
-#         # check game over
-#         for i in range(self.grid_length):
-#             # horizontals and verticals
-#             if ((self.square_is_player(i*self.grid_length,current_player_num) and self.square_is_player(i*self.grid_length+1,current_player_num) and self.square_is_player(i*self.grid_length+2,current_player_num))
-#                 or (self.square_is_player(i+0,current_player_num) and self.square_is_player(i+self.grid_length,current_player_num) and self.square_is_player(i+self.grid_length*2,current_player_num))):
-#                 return  1, True
-
-#         # diagonals
-#         if((self.square_is_player(0,current_player_num) and self.square_is_player(4,current_player_num) and self.square_is_player(8,current_player_num))
-#             or (self.square_is_player(2,current_player_num) and self.square_is_player(4,current_player_num) and self.square_is_player(6,current_player_num))):
-#                 return  1, True
-
-#         if self.turns_taken == self.num_squares:
-#             logger.debug("Board full")
-#             return  0, True
-
-#         return 0, False
 
     @property
     def current_player(self):
@@ -479,13 +487,11 @@ class MonopolyEnv(gym.Env):
 
 
         # players
-        #### Token????????
         self.players = [Player(0, '1'), Player(1, '-1')]
 
         self.current_player_num = 0
         self.turns_taken = 0
         self.done = False
-        ##### turns_taken & done needed?
         logger.debug(f'\n\n---- NEW GAME ----')
         return self.observation
 
