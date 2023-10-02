@@ -333,9 +333,13 @@ class MonopolyEnv(gym.Env):
                         # buy back
                         tile_action.append(0)
                     else:
-                        tile_action.append([0,0,1])
+                        tile_action.append(0)
+                        tile_action.append(0)
+                        tile_action.append(1)
                 else:
-                    tile_action.append([0,0,0])
+                    tile_action.append(0)
+                    tile_action.append(0)
+                    tile_action.append(0)
 
                 legal_actions.append(tile_action)
 
@@ -348,6 +352,8 @@ class MonopolyEnv(gym.Env):
     def square_is_player(self, tile, player):
         return self.board[tile].pieceType == self.players[player].playerSymbol
 
+
+    ###### check logic
     def check_game_over(self):
       winindex = [0]
       winworth = [0]
@@ -372,10 +378,10 @@ class MonopolyEnv(gym.Env):
           winindex.append(i)
           winworth.append(player.cash)
       
-      ###### which number is which version
+      ######
       winworthsorted = sorted(winworth)
       if winworthsorted[0] <= 0 and len(winworth) == 1:
-        if self.players[winindex[0]] == '#### need to be added':
+        if self.players[winindex[0]] == 1:
           return 1, True
         else:
           return 0, True
@@ -386,31 +392,61 @@ class MonopolyEnv(gym.Env):
     def current_player(self):
         return self.players[self.current_player_num]
 
-
-#     def step(self, action):
+    ##### where to put the other logic of the game
+    def step(self, action):
         
-#         reward = [0,0]
+        reward = [0,0]
         
-#         # check move legality
-#         board = self.board
+        # check move legality
+        board = self.legal_actions()
         
-#         if (board[action].number != 0):  # not empty
-#             done = True
-#             reward = [1, 1]
-#             reward[self.current_player_num] = -1
-#         else:
-#             board[action] = self.current_player.token
-#             self.turns_taken += 1
-#             r, done = self.check_game_over()
-#             reward = [-r,-r]
-#             reward[self.current_player_num] = r
+        if (board[action[0]][action[1]] == 0):  # not legal
+            done = True
+            reward = [1, 1]
+            reward[self.current_player_num] = -1
+        else:
+            board[action] = self.current_player.playerSymbol
 
-#         self.done = done
+            if action[1] == 0 and action[0] != 10:
+              self.board[action[0]].pieceType == self.current_player.playerSymbol
+              self.bankrupt(self.board[action[0].price], self.current_player.playerSymbol)
+            elif action[0] == 10 and action[1] == 0:
+              # roll dice
+              self.d1.randomnum()
+              self.d2.randomnum()
+              self.current_player.diceroll = self.d1.currentnum + self.d2.currentnum
+              if self.d1.currentnum != self.d2.currentnum:
+                self.current_player.diceJail += 1
+              else:
+                self.current_player.setJail()
+                self.current_player.setDiceJail(0)
+            elif action[0] == 10 and action[1] == 1:
+              # pay out of jail
+              self.bankrupt(-50, self.current_player.playerSymbol)
+              self.current_player.diceJail = 0
+            elif action[0] in [1,3,6,7,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]:
+              if action[1] in [1,2]:
+                self.board[action[0]].setHouse()
+                self.current_player.earn(-(self.board[action[0]].househotelCosts))
+              elif action[1] == 3:
+                self.bankrupt(self.board[action[0]].mortgagedPayPrice, self.current_player.playerSymbol)
+                self.current_player.setMortgaged(self.properties.index(self.board[action[0]]))
+                self.current_player.playerProperty[(self.properties.index(self.board[action[0]])][0] = False
+                self.current_player.houseNum += self.current_player.playerProperty[(self.properties.index(self.board[action[0]]))][1]
+                self.current_player.hotelNum += self.current_player.playerProperty[(self.properties.index(self.board[action[0]]))][2]
+                self.board[action[0]].mortgaged = False
 
-#         if not done:
-#             self.current_player_num = (self.current_player_num + 1) % 2
+            self.turns_taken += 1
+            r, done = self.check_game_over()
+            reward = [-r,-r]
+            reward[self.current_player_num] = r
 
-#         return self.observation, reward, done, {}
+        self.done = done
+
+        if not done:
+            self.current_player_num = (self.current_player_num + 1) % 2
+
+        return self.observation, reward, done, {}
 
 
     def reset(self):
