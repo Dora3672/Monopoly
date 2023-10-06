@@ -197,7 +197,356 @@ class Player:
 
   def setFreeJail(self):
     self.freeJail = not self.freeJail
-    
+
+
+class Tile:
+  def __init__(self):
+    self.hasPiece = False
+    # player number
+    self.pieceType = 0
+
+## Getter Functions
+  def getPieceType(self):
+    return self.pieceType
+
+  def checkHasPiece(self):
+    return self.hasPiece
+
+## Setter Function
+  def setPiece(self, newPiece):
+    self.hasPiece = True
+    self.pieceType = newPiece  
+
+
+class PropertyTile(Tile):
+  #color = number starts from 1
+  def __init__(self, color, pprice):
+    self.once = False #whether the if statement in the sent rent function is called or not
+    self.occupied = False #whether the property is occupied or not
+    self.color = color
+    self.price = pprice #the cost to buy the property
+    self.rent = (pprice/10) - 4
+    self.rentWOneHouse = (pprice/2) - 20 #rent with one house
+    self.house = 0 #number of house
+    self.hotel = 0 #number of hotel
+    self.hhcosts = [50, 100, 100, 150, 150, 150, 200, 200]
+    self.househotelCosts = self.hhcosts[color] #costs for houses and hotels
+    self.colorset = False #whether the colorset is full or not
+    self.mortgaged = False
+    self.mortgageprice = pprice/2
+    self.mortgagedPayPrice = 1.1 * self.mortgageprice #price to get back the mortgaged property
+    sel.diceroll = 0
+    super().__init__()
+
+  def getOccupied(self):
+    return self.occupied
+
+  def getColor(self):
+    return self.color
+
+  def getPrice(self):
+    return self.price
+
+  def getOwner(self):
+    return self.pieceType
+
+  def getRent(self):
+    self.setRent()
+    if self.mortgaged == True:
+      return 0
+    return self.rent
+
+  def getHouse(self):
+    return self.house
+
+  def getHotel(self):
+    return self.hotel
+
+  def getColorSet(self):
+    return self.colorset
+
+  def getOccupied(self):
+    return self.occupied
+
+  def getMortgagePrice(self):
+    return self.mortgageprice
+
+  def getMortgaged(self):
+    return self.mortgaged
+
+  def getMortgagedPayPrice(self):
+    return self.mortgagedPayPrice
+
+  def getHouseHotelPrice(self):
+    return self.househotelCosts
+
+  def setOccupied(self):
+    self.occupied = not self.occupied
+
+  def setOwner(self, pieceType):
+    self.pieceType = pieceType
+    self.setOccupied()
+
+  def setPrice(self, price):
+    self.price = price
+
+  def setRent(self):
+    if self.colorset == True and self.once == False:
+      self.rent = self.rent*2
+      self.once = True
+    else:
+      if self.house == 1:
+        self.rent = self.rentWOneHouse
+      elif self.house == 2:
+        self.rent = 3 * self.rentWOneHouse
+      elif self.house == 3:
+        self.rent = 50 * round((140 + (6 * self.rentWOneHouse)) / 50)
+      elif self.house == 4:
+        self.rent = 25 * round((210 + (7 * self.rentWOneHouse)) / 25)
+      elif self.hotel == 1:
+        self.rent = 25 * round((600 + (5 * self.rentWOneHouse)) / 25)
+
+  def setHouse(self):
+    if self.house == 4:
+      self.house = 0
+      self.setHotel() ##house max, then call set hotel
+    elif self.house < 4 and self.house == 0:
+      self.house += 1
+
+  def setHotel(self):
+    if self.hotel == 0:
+      self.hotel += 1
+
+  def setColorSet(self):
+    self.colorset = not self.colorset ##owner needs to be the same (in main, if the user has all set, colorset is true)
+
+  def setMortgaged(self):
+    self.mortgaged = not self.mortgaged
+
+
+class RailroadTile(Tile):
+  def __init__(self):
+    self.occupied = False #whether the property is occupied or not
+    self.price = 200 #the cost to buy the property
+    self.owner = ""
+    self.rent = 25
+    self.totalRailroad = 0 #number of total railroads
+    super().__init__()
+
+  def getOccupied(self):
+    return self.occupied
+
+  def getPrice(self):
+    return self.price
+
+  def getOwner(self):
+    return self.pieceType
+
+  def getRent(self):
+    self.setRent()
+    return self.rent
+
+  def getNumberRailroads(self):
+    return self.totalRailroad
+
+  def setOccupied(self):
+    self.occupied = not self.occupied
+
+  def setOwner(self, pieceType):
+    self.pieceType = pieceType
+    self.setOccupied()
+    self.setRailroadNum()
+
+  def setRent(self):
+    self.rent = 25 * (2 ** (self.totalRailroad - 1))
+
+  def setRailroadNum(self):
+    self.totalRailroad += 1
+
+
+class UtilityTile(Tile):
+  def __init__(self):
+    self.occupied = False #whether the property is occupied or not
+    self.price = 150 #the cost to buy the property
+    self.owner = ""
+    self.utilities = False #whether the player owns the two utilities or not
+    super().__init__()
+
+  def getOccupied(self):
+    return self.occupied
+
+  def getPrice(self):
+    return self.price
+
+  def getOwner(self):
+    return self.pieceType
+
+  def getRent(self, diceroll):
+    if self.utilities == False:
+      return 4 * diceroll
+    else:
+      return 10 * diceroll
+
+  def getUtilities(self):
+    return self.utilities
+
+  def setOccupied(self):
+    self.occupied = not self.occupied
+
+  def setOwner(self, pieceType):
+    self.pieceType = pieceType
+    self.setOccupied()
+
+  def setUtilities(self):
+    self.utilities = not self.utilities
+
+
+import pandas as pd
+import random
+
+class CChestTile(Tile):
+  def __init__(self):
+    super().__init__()
+    self.ccnum = 0 #random cc index
+    self.communityChest = {
+        "Text":{
+            0:"You set aside time every week to hang out with your elderly neighbor – you’ve heard some amazing stories! COLLECT $100.",
+            1:"You organize a group to clean up your town’s footpaths. COLLECT $50.",
+            2:"You volunteered at a blood donation. There were free cookies! COLLECT $10.",
+            3:"You buy a few bags of cookies from that school bake sale. Yum! PAY $50.",
+            4:"You rescue a puppy – and you feel rescued, too! GET OUT OF JAIL FREE. Keep this card until needed, traded, or sold.",
+            5:"You organize a street party so people on your road can get to know each other. COLLECT $10 FROM EACH PLAYER.",
+            6:"Blasting music late at night? Your neighbors do not approve. GO TO JAIL. DO NOT PASS GO. DO NOT COLLECT $200.",
+            7:"You help your neighbor bring in her groceries. She makes you lunch to say thanks! COLLECT $20.",
+            8:"You help build a new school playground – then you get to test the slide! COLLECT $100.",
+            9:"You spend the day playing games with kids at a local children’s hospital. COLLECT $100.",
+            10:"You go to the local school’s car wash fundraiser – but you forget to close your windows! PAY $100.",
+            11:"Just when you think you can’t go another step, you finish that foot race – and raise money for your local hospital! ADVANCE TO GO. COLLECT $200.",
+            12:"You help your neighbors clean up their Gardens after a big storm. COLLECT $200.",
+            13:"Your fuzzy friends at the animal shelter will be thankful for your donation. PAY $50.",
+            14:"You should have volunteered for that home improvement project – you would have learned valuable skills! FOR EACH HOUSE YOU OWN, PAY $40. FOR EACH HOTEL YOU OWN, PAY $115.",
+            15:"You organize a bake sale for your local school. COLLECT $25."
+        },
+
+        "PlayerEarn":{
+            0:100,
+            1:50,
+            2:10,
+            3:-50,
+            4:0,
+            5:10,
+            6:0,
+            7:20,
+            8:100,
+            9:100,
+            10:-100,
+            11:0,
+            12:0,
+            13:-50,
+            14:0,
+            15:25
+        },
+
+        "OtherEachEarn":{
+            0:0,
+            1:0,
+            2:0,
+            3:0,
+            4:0,
+            5:0,
+            6:-10,
+            7:0,
+            8:0,
+            9:0,
+            10:0,
+            11:0,
+            12:0,
+            13:0,
+            14:0,
+            15:0,
+        }
+    }
+
+  def landCC(self):
+    self.cc = pd.DataFrame(self.communityChest)
+    self.ccnum = random.randint(0, 15)
+    return (
+        self.ccnum,
+        self.cc.loc[self.ccnum, 'Text'],
+        self.cc.loc[self.ccnum, 'PlayerEarn'],
+        self.cc.loc[self.ccnum, 'OtherEachEarn']
+    )
+
+
+import pandas as pd
+import random
+
+class chanceTile(Tile):
+  def __init__(self):
+    super().__init__()
+    self.cnum = 0 #random chance index
+    self.chance = {
+        "Text":{
+            0:"Advance to 'Go'.",
+            1:"Advance to Illinois Ave. If you pass Go, collect $200.",
+            2:"Advance to St. Charles Place. If you pass Go, collect $200.",
+            3:"Advance token to the nearest Utility. If unowned, you may buy it from the Bank. If owned, throw dice and pay owner a total 10 (ten) times the amount thrown.",
+            4:"Advance to the nearest Railroad. If unowned, you may buy it from the Bank. If owned, pay owner twice the retal to which they are otherwise entitled. If Railroad is unowned, you may buy it from the Bank.",
+            5:"Bank pays you dividend of $50.",
+            6:"Get out of Jail Free. This card may be kept until needed, or traded/sold.",
+            7:"Go Back Three Spaces.",
+            8:"Go to Jail. Go directly to Jail. Do not pass GO, do not collect $200. ",
+            9:"Make general repairs on all your property: For each house pay $25, For each hotel {pay} $100.",
+            10:"Take a trip to Reading Railroad. If you pass Go, collect $200.",
+            11:"Take a walk on the Boardwalk. Advance token to Boardwalk.",
+            12:"You have been elected Chairman of the Board. Pay each player $50.",
+            13:"Your building loan matures. Receive $150.",
+        },
+
+        "Earn":{
+            0:0,
+            1:0,
+            2:0,
+            3:0,
+            4:0,
+            5:50,
+            6:0,
+            7:0,
+            8:0,
+            9:0,
+            10:0,
+            11:0,
+            12:0,
+            13:150,
+        },
+
+        "Position":{
+            0:0,
+            1:24,
+            2:16,
+            3:[12, 28],
+            4:[5, 15, 25, 35],
+            5:'',
+            6:'',
+            7:'',
+            8:30,
+            9:'',
+            10:5,
+            11:39,
+            12:'',
+            13:''
+        }
+    }
+
+  def landC(self):
+    self.c = pd.DataFrame(self.chance)
+    self.cnum = random.randint(0, 13)
+    return (
+        self.cnum,
+        self.c.loc[self.cnum, 'Text'],
+        self.c.loc[self.cnum, 'Earn'],
+        self.c.loc[self.cnum, 'Position']
+    )
 
 
 class MonopolyEnv(gym.Env):
@@ -297,6 +646,11 @@ class MonopolyEnv(gym.Env):
         # Concatenate the arrays into the observation
         observation = np.concatenate((player_array.flatten(), property_array.flatten(), railroad_array.flatten(), utility_array.flatten()))
 
+        # if game continues, do the actions to go to the next round
+        index, worth = self.calculateWorth()        
+        if worth <= 0:
+
+      
         return observation
 
 
@@ -353,10 +707,9 @@ class MonopolyEnv(gym.Env):
         return self.board[tile].pieceType == self.players[player].playerSymbol
 
 
-    ###### check logic
-    def check_game_over(self):
+    def calculateWorth(self):
       winindex = [0]
-      winworth = [0]
+      winworth = [1]
       for i in range(self.playerNum):
         player = self.players[i]
         ca = player.cash
@@ -377,8 +730,11 @@ class MonopolyEnv(gym.Env):
         elif winworth[0] == player.cash:
           winindex.append(i)
           winworth.append(player.cash)
-      
-      ######
+        return winindex, winworth
+
+    ###### check logic
+    def check_game_over(self):
+      winindex, winworth = self.calculateWorth()
       winworthsorted = sorted(winworth)
       if winworthsorted[0] <= 0 and len(winworth) == 1:
         if self.players[winindex[0]] == 1:
@@ -445,6 +801,7 @@ class MonopolyEnv(gym.Env):
 
         if not done:
             self.current_player_num = (self.current_player_num + 1) % 2
+            ##### add turn stuff
 
         return self.observation, reward, done, {}
 
