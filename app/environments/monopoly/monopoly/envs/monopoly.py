@@ -569,8 +569,14 @@ class MonopolyEnv(gym.Env):
         self.done = False
         
 
+    ####### need initial observation??????
     @property
     def observation(self):
+        # if game continues, do the actions to go to the next round
+        index, worth = self.calculateWorth()        
+        if worth <= 0:
+          self.turn()
+
         # Create an observation space representing the state of the Monopoly game
         num_property_features = 12  # Number of property-related features
         num_railroads_features = 5  # Number of features for railroads
@@ -645,13 +651,372 @@ class MonopolyEnv(gym.Env):
 
         # Concatenate the arrays into the observation
         observation = np.concatenate((player_array.flatten(), property_array.flatten(), railroad_array.flatten(), utility_array.flatten()))
-
-        # if game continues, do the actions to go to the next round
-        index, worth = self.calculateWorth()        
-        if worth <= 0:
-
       
         return observation
+
+  ######## prompt to do action? how to receive action? how to do if do another turn due to rolling doubles? how to do if skip turn due to 
+  def turn(self, playern):
+    player=self.players[playern]
+    self.current_player = player
+    doubles = False
+
+    # if in jail and still can try to get out of jail free
+    if player.getJail() == True and player.diceJail < 3:
+      # if have free jail card
+      if player.getFreeJail() == True:
+        player.setFreeJail()
+      # if do not have free jail card
+      else:
+        # ask if want to get out of jail free
+        doubles = ''
+        while doubles.lower() not in ['y', 'n']:
+          print("You still have ", (3-player.getDiceJail()), " turns to try to get out of the jail free.")
+          doubles = input("Do you want to try to get out of the jail free by rolling a double (y/n): ")
+        if doubles.lower() == 'y':
+          self.d1.randomnum()
+          self.d2.randomnum()
+          player.diceroll = self.d1.currentnum + self.d2.currentnum
+          print("Dice Roll: ", self.d1.currentnum, self.d2.currentnum)
+          if self.d1.currentnum != self.d2.currentnum:
+            player.diceJail += 1
+            print("You still have ", (3-player.getDiceJail()), " turns to try to get out of the jail free.")
+          else:
+            print("You are now out of the jail! Continue moving next round.")
+            player.setJail()
+            player.setDiceJail(0)
+        else:
+          self.end = self.bankrupt(-50, playern)
+          player.setJail()
+          player.setDiceJail(0)
+    # if in jail and cannot get out of jail free
+    elif player.jail == True and player.diceJail == 3:
+      print("In Prison...")
+      print("You 0 turns left to try to get out of the jail free.")
+      self.end = self.bankrupt(-50, playern)
+      player.diceJail = 0
+    # not in jail
+    else:
+      # did not move there because of chance/community chest, roll dice
+      if player.move == False:
+
+        # roll the dice
+        self.d1.randomnum()
+        self.d2.randomnum()
+        # print the dice roll
+        print(self.d1.currentnum, self.d2.currentnum)
+        self.dice_roll = self.d1.currentnum + self.d2.currentnum
+        print(self.players[(playern)].name, "dice roll:", self.dice_roll)
+        player.diceroll = self.dice_roll
+
+        # rolling doubles
+        if self.d1.currentnum == self.d2.currentnum:
+          print(f"Rolling Doubles x{player.rollingdoubles + 1}!")
+          doubles = True
+          player.rollingdoubles += 1
+        else:
+          player.rollingdoubles = 0
+      if player.move == True:
+        self.dice_roll = 0
+      player.move = False
+      if player.rollingdoubles == 3:
+        print("Go to Jail!")
+        player.wasJailed = True
+        player.setPosition(10)
+        player.wasJailed = True
+        player.jail = True
+        player.rollingdoubles = 0
+      else:
+        # move the player
+        if player.position + self.dice_roll == 40:
+          print(self.boardnames[0])
+        player.addPosition(self.dice_roll)
+        position = player.getPosition()
+        if position % 40 != 0:
+          print(self.boardnames[position])
+
+        if position == 0:
+          pass
+        # community chest
+        elif position in [2, 17, 33]:
+          ccnum, text, selfEarn, otherEarn = self.communityChest.landCC()
+          print(text)
+
+          if ccnum == 5:
+            self.end = self.bankrupt(selfEarn * (self.playerNum-1), playern)
+          else:
+            if selfEarn != 0:
+              self.end = self.bankrupt(selfEarn, playern)
+          if otherEarn != 0:
+            for p in range(self.playerNum):
+              if p != playern:
+                e = self.end
+                self.end = self.bankrupt(otherEarn, p)
+                if e == True:
+                  self.end = True
+
+          # free jail card
+          if ccnum == 4:
+            player.freeJail = True
+          # go to jail
+          elif ccnum == 6:
+            # self.open_image(position)
+            player.wasJailed = True
+            player.setPosition(10)
+            player.wasJailed = True
+            player.jail = True
+          # go to Go
+          elif ccnum == 11:
+            player.setPosition(0)
+          # pay for houses and hotels
+          elif ccnum == 14:
+            if player.houseNum != 0 and player.hotelNum != 0:
+              self.end = self.bankrupt(-(player.getHouseNum() * 40 + player.getHotelNum() * 115), playern)
+
+
+        # chance
+        elif position in [7, 22, 36]:
+          cnum, text, earning, newposition = self.chance.landC()
+          print(text)
+
+          # moves
+          # if advance to a specific property
+          if cnum in [0, 1, 2, 10, 11]:
+            player.setPosition(newposition)
+            player.move = True
+            if cnum != 0:
+              self.turn(playern)
+          # if advance to the nearest something
+          elif cnum in [3, 4]:
+            # utilities
+            if cnum == 3:
+              self.closest([12, 28], position, playern)
+              newposition = player.position
+              utility = self.electricCompany if newposition == 12 else self.waterWorks
+              if utility.occupied == False or ((player.playerUtilities[0] == True if newposition == 12 else player.playerUtilities[1] == True)):
+                player.move = True
+                self.turn(playern)
+              elif utility.mortgaged == True:
+                pass
+              else:
+                self.d1.randomnum()
+                self.d2.randomnum()
+                print("Dice Roll:", self.d1.currentnum, self.d2.currentnum)
+                self.dice_roll = self.d1.currentnum + self.d2.currentnum
+                print(f"{self.players[playern].name}'s dice roll: {self.dice_roll}")
+                player.diceroll = self.d1.currentnum + self.d2.currentnum
+                self.end = self.bankrupt(-(10 * self.dice_roll), playern)
+                e = self.end
+                self.end = self.bankrupt((10 * self.dice_roll), int(utility.pieceType))
+                if e == True:
+                  self.end = True
+            # railroad
+            else:
+              self.closest([5, 15, 25, 35], position, playern)
+              newposition = player.position
+              railroad = self.railroads[[5, 15, 25, 35].index(newposition)]
+              if railroad.occupied == False or (player.playerRailroad[[5, 15, 25, 35].index(newposition)] == True):
+                player.move = True
+                self.turn(playern)
+              elif railroad.mortgaged == True:
+                pass
+              else:
+                self.end = self.bankrupt(-(railroad.rent * 2), playern)
+                e = self.end
+                self.end = self.bankrupt((railroad.rent * 2), int(railroad.pieceType))
+                if e == True:
+                  self.end = True
+
+          # if advance to jail
+          elif cnum == 8:
+            # self.open_image(position)
+            player.wasJailed = True
+            player.setPosition(10)
+            player.wasJailed = True
+            player.jail = True
+          # move back three spaces
+          elif cnum == 7:
+            player.addPosition(-3)
+            player.move = True
+            self.turn(playern)
+
+
+          # change in money
+          # earn money
+          if cnum in [5, 13]:
+            self.end = self.bankrupt(earning, playern)
+          # pay by house num and hotel num
+          elif cnum == 9:
+            if player.houseNum != 0 and player.hotelNum != 0:
+              self.end = self.bankrupt(-(player.getHouseNum() * 25 + player.getHotelNum() * 100), playern)
+          # pay to each player
+          elif cnum == 12:
+            self.end = self.bankrupt(- (50 * (self.playerNum-1)), playern)
+            for p in range(self.playerNum):
+              if p != playern:
+                e = self.end
+                self.end = self.bankrupt(50, p)
+                if e == True:
+                  self.end = True
+
+        # tax
+        elif position in [4, 38]:
+          tax = 200 if position == 4 else 100
+          self.end = self.bankrupt(-tax, playern)
+
+        # railroads
+        elif position in [5, 15, 25, 35]:
+          # self.open_image(position)
+          railroad = self.railroads[[5, 15, 25, 35].index(position)]
+          if railroad.occupied == True and player.playerRailroad[[5, 15, 25, 35].index(position)] == False:
+            self.end = self.bankrupt(-(railroad.getRent()), playern)
+            e = self.end
+            self.end = self.bankrupt((railroad.getRent()), int(railroad.pieceType))
+            if e == True:
+              self.end = True
+          elif railroad.occupied == False and player.cash > railroad.price:
+            buy = ''
+            while buy.lower() not in ['y', 'n']:
+              buy = input(f"Do you want to buy {self.railroadnames[[5, 15, 25, 35].index(position)]} (y/n): ")
+            if buy.lower() == 'y':
+              self.end = self.bankrupt(-(railroad.getPrice()), playern)
+              railroad.setOwner(playern)
+              player.addRailroad([5, 15, 25, 35].index(position))
+
+        # utilities
+        elif position in [12, 28]:
+          # self.open_image(position)
+          utility = self.utilities[[12, 28].index(position)]
+          if utility.occupied == True and player.playerUtilities[[12, 28].index(position)] == False:
+            self.end = self.bankrupt(-(utility.getRent(self.dice_roll)), playern)
+            e = self.end
+            self.end = self.bankrupt((utility.getRent(self.dice_roll)), int(utility.pieceType))
+            if e == True:
+              self.end = True
+          elif utility.occupied == False and player.cash > utility.price:
+            buy = ''
+            while buy.lower() not in ['y', 'n']:
+              buy = input(f"Do you want to buy {self.utilitynames[[12, 28].index(position)]} (y/n): ")
+            if buy.lower() == 'y':
+              self.end = self.bankrupt(-(utility.getPrice()), playern)
+              utility.setOwner(playern)
+              player.addUtilities([12, 28].index(position))
+              if player.playerUtilities == [True, True]:
+                utility.setUtilities()
+
+        # do nothing
+        elif position in [10, 20]:
+          pass
+
+        # prison
+        elif position == 30:
+          # self.open_image(position)
+          player.wasJailed = True
+          player.setPosition(10)
+          player.wasJailed = True
+          player.jail = True
+
+        # properties
+        else:
+          # self.open_image(position)
+          prop = self.board[position]
+          if prop.occupied == True:
+            print("Property owner:", self.players[int(prop.pieceType)].name)
+          # property already being bought, player not the owner, not mortaged
+          if prop.occupied == True and self.board[position].pieceType != playern and prop.mortgaged == False:
+            self.end = self.bankrupt(-(prop.getRent()), playern)
+            e = self.end
+            self.end = self.bankrupt((prop.getRent()), int(prop.pieceType))
+            if e == True:
+              self.end = True
+          # not occupied
+          elif prop.occupied == False and player.cash > prop.price:
+            buy = ''
+            while buy.lower() not in ['y', 'n']:
+              buy = input(f"Do you want to buy {self.propertynames[self.properties.index(self.board[position])]} (y/n): ")
+            if buy.lower() == 'y':
+              self.end = self.bankrupt(-(prop.getPrice()), playern)
+              prop.setOwner(playern)
+              player.addProperty(self.properties.index(self.board[position]))
+              for s, owned in player.playerSets.items():
+                if owned == True:
+                  for p in self.sets[self.colors.index(s)]:
+                    p.setColorSet()
+          # occupid
+          else:
+            # not mortgaged
+            if prop.mortgaged == False and player.cash > prop.househotelCosts and prop.pieceType == playern:
+              if prop.hotel != 1:
+                h = prop.house
+                buy = ''
+                while buy.lower() not in ['y', 'n']:
+                  buy = input("Do you want to buy a " + ("house" if h < 5 else "hotel") + " (y/n): ")
+                if buy.lower() == 'y':
+                  prop.setHouse()
+                  player.earn(-(prop.househotelCosts))
+            # mortgaged
+            else:
+              # yes owner
+              if playern == prop.pieceType and prop.mortgaged == True and prop.getMortgagedPayPrice() < player.cash:
+                buy = ''
+                while buy.lower() not in ['y', 'n']:
+                  print('Your current cash:', player.cash)
+                  buy = input(f"Do you want to buy {self.propertynames[self.properties.index(self.board[position])]} back (y/n): ")
+                if buy.lower() == 'y':
+                  self.bankrupt(prop.mortgagedPayPrice, playern)
+                  player.setMortgaged(self.properties.index(prop))
+                  player.playerProperty[(self.properties.index(self.board[position]))][0] = False
+                  player.houseNum += player.playerProperty[(self.properties.index(self.board[position]))][1]
+                  player.hotelNum += player.playerProperty[(self.properties.index(self.board[position]))][2]
+                  prop.mortgaged = False
+              # not owner or not enough money
+              else:
+                pass
+
+        # if rolled doubles, continue turn
+        if doubles == True and player.position != 30:
+          self.turn(playern)
+
+
+  def closest(self, newposition, position, playern):
+    player = self.players[playern]
+    # find the place that is closest to the player
+    finalposition = newposition[0]
+    for place in newposition:
+      if (place - position) < (finalposition - position):
+        finalposition = place
+    if finalposition < position:
+      player.setWasJailed()
+    player.setPosition(finalposition)
+
+
+  def bankrupt(self, moneyneed, playern):
+    player = self.players[playern]
+    if moneyneed > 0:
+      player.earn(moneyneed)
+    else:
+      if player.cash > -(moneyneed):
+        player.earn(moneyneed)
+      else:
+        moneyneed += player.cash
+        player.setCash(0)
+        totalmortgage = []
+        indices = []
+        for i in range(22):
+          if player.playerProperty[i][0] == True and player.mortgaged[i] == False:
+            totalmortgage.append(self.properties[i].mortgageprice)
+            indices.append(i)
+        combination = self.find_combination(totalmortgage, -(moneyneed))
+        for mprice in combination:
+          for i in indices:
+            if self.properties[i].mortgageprice == mprice and self.properties[i].mortgaged == False:
+              player.earn(mprice)
+              player.playerProperty[i][0] = False
+              player.houseNum -= player.playerProperty[i][1]
+              player.hotelNum -= player.playerProperty[i][2]
+              self.properties[i].mortgaged = True
+              player.setMortgaged(i)
+              break
+        player.earn(moneyneed)
 
 
     @property
