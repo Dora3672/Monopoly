@@ -1145,10 +1145,10 @@ class MonopolyEnv(gym.Env):
         self.railroads = [self.rRailroad, self.pRailroad, self.bRailroad, self.sLine]
         self.railroadnames = ["Reading Railroad", "Pennsylvania Railroad", "B&O Railroad", "Short Line"]
 
-        self.board = ['', self.mAvenue, self.communityChest, self.bAvenue, '', self.rRailroad, self.oAvenue, self.chance, self.verAvenue, self.cAvenue,
-                    '', self.sCPlace, self.electricCompany, self.sAvenue, self.viAvenue, self.pRailroad, self.sJPlace, self.communityChest, self.tAvenue, self. nYAvenue,
-                    '', self.kAvenue, self.chance, self.inAvenue, self.ilAvenue, self.bRailroad, self.aAvenue, self.venAvenue, self.waterWorks, self.mGardens,
-                    '', self.paAvenue, self.nCAvenue, self.communityChest, self.peAvenue, self.sLine, self.chance, self.pPlace, '', self.bw]
+        self.board = [Tile(), self.mAvenue, self.communityChest, self.bAvenue, Tile(), self.rRailroad, self.oAvenue, self.chance, self.verAvenue, self.cAvenue,
+                    Tile(), self.sCPlace, self.electricCompany, self.sAvenue, self.viAvenue, self.pRailroad, self.sJPlace, self.communityChest, self.tAvenue, self. nYAvenue,
+                    Tile(), self.kAvenue, self.chance, self.inAvenue, self.ilAvenue, self.bRailroad, self.aAvenue, self.venAvenue, self.waterWorks, self.mGardens,
+                    Tile(), self.paAvenue, self.nCAvenue, self.communityChest, self.peAvenue, self.sLine, self.chance, self.pPlace, Tile(), self.bw]
 
 
         # players
