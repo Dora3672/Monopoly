@@ -954,9 +954,6 @@ class MonopolyEnv(gym.Env):
         return legal_actions
 
 
-
-
-    ######## add pieceType for all tile
     def square_is_player(self, tile, player):
         return self.board[tile].pieceType == self.players[player].playerSymbol
 
@@ -1017,9 +1014,20 @@ class MonopolyEnv(gym.Env):
         else:
             board[action] = self.current_player.playerSymbol
 
-            if action[1] == 0 and action[0] not in [10, len(action)-1]:
-              self.board[action[0]].pieceType == self.current_player.playerSymbol
-              self.bankrupt(self.board[action[0].price], self.current_player.playerSymbol)
+            # railroad
+            if action[1] == 0 and action[0] in [5,15,25,35]:
+              railroad = self.board[action[0]]
+              self.bankrupt(railroad.price, self.current_player.playerSymbol)
+              railroad.setOwner(self.current_player.playerSymbol)
+              self.current_player.addRailroad([5, 15, 25, 35].index(action[0]))
+            # utilities
+            if action[1] == 0 and action[0] in [12.28]:
+              utility = self.board[action[0]]
+              self.bankrupt(utility.price, self.current_player.playerSymbol)
+              utility.setOwner(self.current_player.playerSymbol)
+              self.current_player.addUtilities([12, 28].index(action[0]))
+              if self.current_player.playerUtilities == [True, True]:
+                utility.setUtilities()
             elif action[0] == 10 and action[1] == 0:
               # roll dice
               self.d1.randomnum()
@@ -1035,9 +1043,20 @@ class MonopolyEnv(gym.Env):
               self.bankrupt(-50, self.current_player.playerSymbol)
               self.current_player.diceJail = 0
             elif action[0] in [1,3,6,7,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]:
+              prop = self.board[action[0]]
+              # buy property
+              if action[1] == 0:
+                self.bankrupt(-(prop.getPrice()), self.current_player.playerSymbol)
+                prop.setOwner(self.current_player.playerSymbol)
+                self.current_player.addProperty(self.properties.index(self.board[action[0]]))
+                for s, owned in self.current_player.playerSets.items():
+                  if owned == True:
+                    for p in self.sets[self.colors.index(s)]:
+                      p.setColorSet()
               if action[1] in [1,2]:
-                self.board[action[0]].setHouse()
-                self.current_player.earn(-(self.board[action[0]].househotelCosts))
+                prop.setHouse()
+                self.current_player.earn(-(prop.househotelCosts))
+                self.current_player.addHouseHotel(self.properties.index(self.board[action[0]]))
               elif action[1] == 3:
                 self.bankrupt(self.board[action[0]].mortgagedPayPrice, self.current_player.playerSymbol)
                 self.current_player.setMortgaged(self.properties.index(self.board[action[0]]))
@@ -1053,9 +1072,8 @@ class MonopolyEnv(gym.Env):
 
         self.done = done
 
-        if not done:
+        if not done and self.next == False:
             self.current_player_num = (self.current_player_num + 1) % 2
-            ##### add turn stuff
 
         return self.observation, reward, done, {}
 
@@ -1144,24 +1162,24 @@ class MonopolyEnv(gym.Env):
 
 
 
-#     def render(self, mode='human', close=False, verbose = True):
-#         logger.debug('')
-#         if close:
-#             return
-#         if self.done:
-#             logger.debug(f'GAME OVER')
-#         else:
-#             logger.debug(f"It is Player {self.current_player.id}'s turn to move")
+    def render(self, mode='human', close=False, verbose = True):
+        logger.debug('')
+        if close:
+            return
+        if self.done:
+            logger.debug(f'GAME OVER')
+        else:
+            logger.debug(f"It is Player {self.current_player.playerSymbol}'s turn to move")
             
-#         logger.debug(' '.join([x.symbol for x in self.board[:self.grid_length]]))
-#         logger.debug(' '.join([x.symbol for x in self.board[self.grid_length:self.grid_length*2]]))
-#         logger.debug(' '.join([x.symbol for x in self.board[(self.grid_length*2):(self.grid_length*3)]]))
+        logger.debug(' '.join([x.symbol for x in self.board[:self.grid_length]]))
+        logger.debug(' '.join([x.symbol for x in self.board[self.grid_length:self.grid_length*2]]))
+        logger.debug(' '.join([x.symbol for x in self.board[(self.grid_length*2):(self.grid_length*3)]]))
 
-#         if self.verbose:
-#             logger.debug(f'\nObservation: \n{self.observation}')
+        if self.verbose:
+            logger.debug(f'\nObservation: \n{self.observation}')
         
-#         if not self.done:
-#             logger.debug(f'\nLegal actions: {[i for i,o in enumerate(self.legal_actions) if o != 0]}')
+        if not self.done:
+            logger.debug(f'\nLegal actions: {[i for i,o in enumerate(self.legal_actions) if o != 0]}')
 
 
 #     def rules_move(self):
