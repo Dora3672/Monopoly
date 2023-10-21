@@ -220,7 +220,8 @@ class Tile:
 
 class PropertyTile(Tile):
   #color = number starts from 1
-  def __init__(self, color, pprice):
+  def __init__(self, color, pprice, position):
+    self.position = position
     self.once = False #whether the if statement in the sent rent function is called or not
     self.occupied = False #whether the property is occupied or not
     self.color = color
@@ -235,7 +236,7 @@ class PropertyTile(Tile):
     self.mortgaged = False
     self.mortgageprice = pprice/2
     self.mortgagedPayPrice = 1.1 * self.mortgageprice #price to get back the mortgaged property
-    sel.diceroll = 0
+    self.diceroll = 0
     super().__init__()
 
   def getOccupied(self):
@@ -325,10 +326,10 @@ class PropertyTile(Tile):
 
 
 class RailroadTile(Tile):
-  def __init__(self):
+  def __init__(self, position):
+    self.position = position
     self.occupied = False #whether the property is occupied or not
     self.price = 200 #the cost to buy the property
-    self.owner = ""
     self.rent = 25
     self.totalRailroad = 0 #number of total railroads
     super().__init__()
@@ -365,10 +366,10 @@ class RailroadTile(Tile):
 
 
 class UtilityTile(Tile):
-  def __init__(self):
+  def __init__(self, position):
+    self.position = position
     self.occupied = False #whether the property is occupied or not
     self.price = 150 #the cost to buy the property
-    self.owner = ""
     self.utilities = False #whether the player owns the two utilities or not
     super().__init__()
 
@@ -559,19 +560,110 @@ class MonopolyEnv(gym.Env):
         
         self.n_players = 2
         self.num_squares = 40 
-        self.action_space = gym.spaces.Discrete(self.num_squares)
-        self.observation_space = gym.spaces.Box(-1, 1, (self.num_squares, 2))
+        ########
+        #self.action_space = gym.spaces.Discrete(self.num_squares)
+        # each element is thenum of possible action for that tile
+        self.possible_actions = [0,8,0,8,0,2,8,0,8,8,2,8,2,8,8,2,8,0,8,8,0,8,0,8,8,2,8,8,2,8,0,8,8,0,8,2,0,8,0,8]
+        self.action_space = spaces.MultiDiscrete(self.possible_actions)
+        ########
+        #self.observation_space = gym.spaces.Box(-1, 1, (self.num_squares, 2))
+        self.num_property_features = 12  # Number of property-related features
+        self.num_railroads_features = 5  # Number of features for railroads
+        self.num_utilities_features = 4  # Number of features for utilities
+        self.num_player_features = 13  # Number of player-related features
+
+        self.num_players = len(self.players)
+        self.num_properties = len(self.properties)
+        self.num_railroads = len(self.railroads)
+        self.num_utilities = len(self.utilities)
+        self.total_elements = (self.num_players * self.num_player_features) + (self.num_properties * self.num_property_features) + (self.num_railroads * self.num_railroads_features) + (self.num_utilities * self.num_utilities_features)
+        self.observation_shape = (self.total_elements,)
+        self.observation_space = spaces.Box(low=-1, high=1, shape=self.observation_shape)
+        
         self.verbose = verbose
 
+        #board
+        self.mAvenue = PropertyTile(0, 60, 1)
+        self.bAvenue = PropertyTile(0, 60, 3)
+        self.oAvenue = PropertyTile(1, 100, 6)
+        self.verAvenue = PropertyTile(1, 100, 8)
+        self.cAvenue = PropertyTile(1, 120, 9)
+        self.sCPlace = PropertyTile(2, 140, 11)
+        self.sAvenue = PropertyTile(2, 140, 13)
+        self.viAvenue = PropertyTile(2, 160, 14)
+        self.sJPlace = PropertyTile(3, 180, 16)
+        self.tAvenue = PropertyTile(3, 180,18)
+        self.nYAvenue = PropertyTile(3, 200,19)
+        self.kAvenue = PropertyTile(4, 220,21)
+        self.inAvenue = PropertyTile(4, 220,23)
+        self.ilAvenue = PropertyTile(4, 240,24)
+        self.aAvenue = PropertyTile(5, 260,26)
+        self.venAvenue = PropertyTile(5, 260,27)
+        self.mGardens = PropertyTile(5, 280,29)
+        self.paAvenue = PropertyTile(6, 300,31)
+        self.nCAvenue = PropertyTile(6, 300,32)
+        self.peAvenue = PropertyTile(6, 320,34)
+        self.pPlace = PropertyTile(7, 350,37)
+        self.bw = PropertyTile(7, 400,39)
+        self.properties = [self.mAvenue, self.bAvenue,
+                        self.oAvenue, self.verAvenue, self.cAvenue,
+                        self.sCPlace, self.sAvenue, self.viAvenue,
+                        self.sJPlace, self.tAvenue, self.nYAvenue,
+                        self.kAvenue, self.inAvenue, self.ilAvenue,
+                        self.aAvenue, self.venAvenue, self.mGardens,
+                        self.paAvenue, self.nCAvenue, self.peAvenue,
+                        self.pPlace, self.bw]
+        self.boardnames = ['Pass Go! Collect 200', 'Mediterranean Avenue', 'Community Chest', 'Baltic Avenue', 'Income Tax', 'Reading Railroad', 'Oriental Avenue', 'Chance', 'Vermont Avenue', 'Connecticut Avenue',
+                        'Just Visiting', 'St. Charles Place', 'Electric Company', 'States Avenue', 'Virginia Avenue', 'Pennsylvania Railroad', 'St. James Place', 'Community Chest', 'Tennessee Avenue', 'New York Avenue',
+                        'Free Parking', 'Kentucky Avenue', 'Chance', 'Indiana Avenue', 'Illinois Avenue', 'B&O Railroad', 'Atlantic Avenue', 'Ventor Avenue', 'Water Works', 'Marvin Gardens',
+                        'Go to Jail!', 'Pacific Avenue', 'North Carolina Avenue', 'Community Chest', 'Pennsylvania Avenue', 'Short Line', 'Chance', 'Park Place', 'Luxury Tax', 'Boardwalk']
+        self.propertynames = ["Mediterranean Avenue", "Baltic Avenue",
+                            "Oriental Avenue", "Vermont Avenue", "Connecticut Avenue",
+                            "St. Charles Place", "States Avenue", "Virginia Avenue",
+                            "St. James Place", "Tennessee Avenue", "New York Avenue",
+                            "Kentucky Avenue", "Indiana Avenue", "Illinois Avenue",
+                            "Atlantic Avenue", "Ventnor Avenue", "Marvin Gardens",
+                            "Pacific Avenue", "North Carolina Avenue", "Pennsylvania Avenue",
+                            "Park Place", "Boardwalk"]
+        self.colors = ['brown', 'light_blue', 'purple', 'orange', 'red', 'yellow', 'green', 'dark_blue']
+        self.sets = [[self.mAvenue, self.bAvenue],
+                    [self.oAvenue, self.verAvenue, self.cAvenue],
+                    [self.sCPlace, self.sAvenue, self.viAvenue],
+                    [self.sJPlace, self.tAvenue, self.nYAvenue],
+                    [self.kAvenue, self.inAvenue, self.ilAvenue],
+                    [self.aAvenue, self.venAvenue, self.mGardens],
+                    [self.paAvenue, self.nCAvenue, self.peAvenue],
+                    [self.pPlace, self.bw]]
+
+        self.communityChest=CChestTile()
+        self.chance = chanceTile()
+        self.electricCompany = UtilityTile(12)
+        self.waterWorks = UtilityTile(28)
+        self.utilities = [self.electricCompany, self.waterWorks]
+        self.utilitynames = ["Electric Company", "Water Works"]
+        self.rRailroad = RailroadTile(5)
+        self.pRailroad = RailroadTile(15)
+        self.bRailroad = RailroadTile(25)
+        self.sLine = RailroadTile(35)
+        self.railroads = [self.rRailroad, self.pRailroad, self.bRailroad, self.sLine]
+        self.railroadnames = ["Reading Railroad", "Pennsylvania Railroad", "B&O Railroad", "Short Line"]
+
+        self.board = [Tile(), self.mAvenue, self.communityChest, self.bAvenue, Tile(), self.rRailroad, self.oAvenue, self.chance, self.verAvenue, self.cAvenue,
+                    Tile(), self.sCPlace, self.electricCompany, self.sAvenue, self.viAvenue, self.pRailroad, self.sJPlace, self.communityChest, self.tAvenue, self.nYAvenue,
+                    Tile(), self.kAvenue, self.chance, self.inAvenue, self.ilAvenue, self.bRailroad, self.aAvenue, self.venAvenue, self.waterWorks, self.mGardens,
+                    Tile(), self.paAvenue, self.nCAvenue, self.communityChest, self.peAvenue, self.sLine, self.chance, self.pPlace, Tile(), self.bw]
+
+
+
         self.current_player_num = 0
-        self.players = [Player('Player 1', Token('X', 1)), Player('Player 2', Token('O', -1))]
-        self.board = np.zeros(self.num_squares, dtype=int)
+        self.players = Player(0, '1'), Player(1, '-1')
+
+
         self.done = False
         self.next = False   # will have a next round (False no)
         self.roll = True   # next round roll? (False no)
         
 
-    ####### need initial observation??????
     @property
     def observation(self):
         # if game continues, do the actions to go to the next round
@@ -579,25 +671,15 @@ class MonopolyEnv(gym.Env):
         if worth <= 0:
           self.turn()
 
-        # Create an observation space representing the state of the Monopoly game
-        num_property_features = 12  # Number of property-related features
-        num_railroads_features = 5  # Number of features for railroads
-        num_utilities_features = 4  # Number of features for utilities
-        num_player_features = 13  # Number of player-related features
-
-        num_players = len(self.players)
-        num_properties = len(self.properties)
-        num_railroads = len(self.railroads)
-        num_utilities = len(self.utilities)
 
         max_price_scale = 1e6  # Choose a very large value as the max price scale
 
         # Create the player array with zeros
-        player_array = np.zeros((num_players, num_player_features), dtype=float)
+        player_array = np.zeros((self.num_players, self.num_player_features), dtype=float)
         # Update the player array for each player
         for i, player in enumerate(self.players):
             # Update player features
-            player_array[i, 0] = player.playerNum/num_players
+            player_array[i, 0] = player.playerNum/self.num_players
             player_array[i, 1] = ((2 * player.diceroll)/12)-1
             player_array[i, 1] = player.rollingdoubles/3
             player_array[i, 2] = ((2 * player.position)/40)-1
@@ -613,11 +695,11 @@ class MonopolyEnv(gym.Env):
             player_array[i, 12] = int(player.freeJail)
 
         # Create the property array with zeros
-        property_array = np.zeros((num_properties, num_property_features), dtype=float)
+        property_array = np.zeros((self.num_properties, self.num_property_features), dtype=float)
         # Add property-related information
         for i, property in enumerate(self.properties):
             # Update property features
-            property_array[i, 0] = property.pieceType/num_players if property.occupied == True else -1
+            property_array[i, 0] = property.pieceType/self.num_players if property.occupied == True else -1
             property_array[i, 1] = ((2 * self.board.index(property))/40 ) -1
             property_array[i, 2] = ((2 * property.color)/7) - 1
             property_array[i, 3] = ((2 * property.price) / max_price_scale) -1
@@ -631,22 +713,22 @@ class MonopolyEnv(gym.Env):
             property_array[i, 11] = ((2 * property.mortgagedPayPrice)/max_price_scale) -1
 
         # Create the railroad array with zeros
-        railroad_array = np.zeros((num_railroads, num_railroads_features), dtype=float)
+        railroad_array = np.zeros((self.num_railroads, self.num_railroads_features), dtype=float)
         # Add railroad-related information
         for i, railroad in enumerate(self.railroads):
             # Update railroad features
-            railroad_array[i, 0] = railroad.pieceType/num_players if railroad.occupied == True else -1
+            railroad_array[i, 0] = railroad.pieceType/self.num_players if railroad.occupied == True else -1
             railroad_array[i, 1] = ((2 * self.board.index(railroad))/40 ) -1
             railroad_array[i, 2] = ((2 * railroad.price)/max_price_scale) -1
             railroad_array[i, 3] = ((2 * railroad.rent)/max_price_scale) -1
             railroad_array[i, 4] = ((2 * property.totalRailroad)/4) -1
 
         # Create the utility array with zeros
-        utility_array = np.zeros((num_utilities, num_utilities_features), dtype=float)
+        utility_array = np.zeros((self.num_utilities, self.num_utilities_features), dtype=float)
         # Add utility-related information
         for i, utility in enumerate(self.utilities):
             # Update utility features
-            utility_array[i, 0] = utility.pieceType/num_players if utility.occupied == True else -1
+            utility_array[i, 0] = utility.pieceType/self.num_players if utility.occupied == True else -1
             utility_array[i, 1] = ((2 * self.board.index(utility))/40) -1
             utility_array[i, 2] = ((2 * utility.price)/max_price_scale) -1
             utility_array[i, 3] = int(property.utilities)
@@ -655,11 +737,6 @@ class MonopolyEnv(gym.Env):
         observation = np.concatenate((player_array.flatten(), property_array.flatten(), railroad_array.flatten(), utility_array.flatten()))
       
         return observation
-
-  ######## w to do if do another turn due to rolling doubles? how to do if skip turn due to 
-  ### just move the player in observation
-  ### if skip turn, choose the legal action of do nothing ////////
-  ### if rolling double, do not move to the next player and continue
 
 
   def turn(self, playern):
@@ -901,6 +978,7 @@ class MonopolyEnv(gym.Env):
         player.earn(moneyneed)
 
 
+    # first one yes, second one no
     @property
     def legal_actions(self):
         current_player = self.current_player
@@ -913,31 +991,44 @@ class MonopolyEnv(gym.Env):
             if index in [10]:
                 # jail
                 # roll dice, pay
-                legal_actions.append([1,1] if ((current_player.jail == True) and (current_player.diceJail < 3) and (current_player.position == 10)) else [0,0])
+                tile_action.append(1 if ((current_player.jail == True) and (current_player.diceJail < 3) and (current_player.position == 10)) else 0)
+                tile_action.append(1 if ((current_player.jail == True) and (current_player.diceJail < 3) and (current_player.position == 10)) else 0)
             elif index in [5, 15, 25, 35] :
                 # buy railroad
+                tile_action.append(1 if (tile.occupied == False and current_player.position in [5,15,25,35]) else 0)
                 tile_action.append(1 if (tile.occupied == False and current_player.position in [5,15,25,35]) else 0)
             # utilities
             elif index in [12, 28]:
                 # buy utilities
                 tile_action.append(1 if (tile.occupied == False and current_player.position in [12, 28]) else 0)
+                tile_action.append(1 if (tile.occupied == False and current_player.position in [12, 28]) else 0)
             # properties
-            elif index in [1,3,6,7,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]:
+            elif index in [1,3,6,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]:
                 # buy property
+                tile_action.append(1 if tile.occupied == False else 0)
                 tile_action.append(1 if tile.occupied == False else 0)
                 if tile.pieceType == current_player.playerSymbol and current_player.position == index:
                     if tile.mortgaged == False:
                         # buy house
                         tile_action.append(1 if tile.houseNum<4 else 0)
+                        tile_action.append(1 if tile.houseNum<4 else 0)
                         # buy hotel
                         tile_action.append(1 if ((tile.houseNum == 4) and (tile.hotelNum == 0)) else 0)
+                        tile_action.append(1 if ((tile.houseNum == 4) and (tile.hotelNum == 0)) else 0)
                         # buy back
+                        tile_action.append(0)
                         tile_action.append(0)
                     else:
                         tile_action.append(0)
                         tile_action.append(0)
+                        tile_action.append(0)
+                        tile_action.append(0)
+                        tile_action.append(1)
                         tile_action.append(1)
                 else:
+                    tile_action.append(0)
+                    tile_action.append(0)
+                    tile_action.append(0)
                     tile_action.append(0)
                     tile_action.append(0)
                     tile_action.append(0)
@@ -966,24 +1057,24 @@ class MonopolyEnv(gym.Env):
         ca = player.cash
         for ii in range(len(self.properties)):
           if player.mortgaged[ii] == False and player.playerProperty[ii][0] == True:
-            player.cash += self.properties[ii].price
+            ca += self.properties[ii].price
             if player.playerProperty[ii][1] != 0:
-              player.cash += (player.playerProperty[ii][1] + player.playerProperty[ii][2]) * self.properties[ii].househotelCosts
+              ca += (player.playerProperty[ii][1] + player.playerProperty[ii][2]) * self.properties[ii].househotelCosts
         for ii in range(len(self.railroads)):
           if player.playerRailroad[ii] == True:
-            player.cash += 200
+            ca += 200
         for ii in range(len(self.utilities)):
           if player.playerUtilities[ii] == True:
-            player.cash += 150
-        if winworth[0] < player.cash:
+            ca += 150
+        if winworth[0] < ca:
           winindex = [i]
-          winworth = [player.cash]
-        elif winworth[0] == player.cash:
+          winworth = [ca]
+        elif winworth[0] == ca:
           winindex.append(i)
-          winworth.append(player.cash)
+          winworth.append(ca)
         return winindex, winworth
 
-    ###### check logic
+
     def check_game_over(self):
       winindex, winworth = self.calculateWorth()
       winworthsorted = sorted(winworth)
@@ -1012,8 +1103,6 @@ class MonopolyEnv(gym.Env):
             reward = [1, 1]
             reward[self.current_player_num] = -1
         else:
-            board[action] = self.current_player.playerSymbol
-
             # railroad
             if action[1] == 0 and action[0] in [5,15,25,35]:
               railroad = self.board[action[0]]
@@ -1042,7 +1131,7 @@ class MonopolyEnv(gym.Env):
               # pay out of jail
               self.bankrupt(-50, self.current_player.playerSymbol)
               self.current_player.diceJail = 0
-            elif action[0] in [1,3,6,7,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]:
+            elif action[0] in [1,3,6,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]:
               prop = self.board[action[0]]
               # buy property
               if action[1] == 0:
@@ -1053,11 +1142,11 @@ class MonopolyEnv(gym.Env):
                   if owned == True:
                     for p in self.sets[self.colors.index(s)]:
                       p.setColorSet()
-              if action[1] in [1,2]:
+              if action[1] in [2,4]:
                 prop.setHouse()
                 self.current_player.earn(-(prop.househotelCosts))
                 self.current_player.addHouseHotel(self.properties.index(self.board[action[0]]))
-              elif action[1] == 3:
+              elif action[1] == 6:
                 self.bankrupt(self.board[action[0]].mortgagedPayPrice, self.current_player.playerSymbol)
                 self.current_player.setMortgaged(self.properties.index(self.board[action[0]]))
                 self.current_player.playerProperty[(self.properties.index(self.board[action[0]])][0] = False
@@ -1080,28 +1169,28 @@ class MonopolyEnv(gym.Env):
 
     def reset(self):
         # reset board
-        self.mAvenue = PropertyTile(0, 60)
-        self.bAvenue = PropertyTile(0, 60)
-        self.oAvenue = PropertyTile(1, 100)
-        self.verAvenue = PropertyTile(1, 100)
-        self.cAvenue = PropertyTile(1, 120)
-        self.sCPlace = PropertyTile(2, 140)
-        self.sAvenue = PropertyTile(2, 140)
-        self.viAvenue = PropertyTile(2, 160)
-        self.sJPlace = PropertyTile(3, 180)
-        self.tAvenue = PropertyTile(3, 180)
-        self.nYAvenue = PropertyTile(3, 200)
-        self.kAvenue = PropertyTile(4, 220)
-        self.inAvenue = PropertyTile(4, 220)
-        self.ilAvenue = PropertyTile(4, 240)
-        self.aAvenue = PropertyTile(5, 260)
-        self.venAvenue = PropertyTile(5, 260)
-        self.mGardens = PropertyTile(5, 280)
-        self.paAvenue = PropertyTile(6, 300)
-        self.nCAvenue = PropertyTile(6, 300)
-        self.peAvenue = PropertyTile(6, 320)
-        self.pPlace = PropertyTile(7, 350)
-        self.bw = PropertyTile(7, 400)
+        self.mAvenue = PropertyTile(0, 60, 1)
+        self.bAvenue = PropertyTile(0, 60, 3)
+        self.oAvenue = PropertyTile(1, 100, 6)
+        self.verAvenue = PropertyTile(1, 100, 8)
+        self.cAvenue = PropertyTile(1, 120, 9)
+        self.sCPlace = PropertyTile(2, 140, 11)
+        self.sAvenue = PropertyTile(2, 140, 13)
+        self.viAvenue = PropertyTile(2, 160, 14)
+        self.sJPlace = PropertyTile(3, 180, 16)
+        self.tAvenue = PropertyTile(3, 180,18)
+        self.nYAvenue = PropertyTile(3, 200,19)
+        self.kAvenue = PropertyTile(4, 220,21)
+        self.inAvenue = PropertyTile(4, 220,23)
+        self.ilAvenue = PropertyTile(4, 240,24)
+        self.aAvenue = PropertyTile(5, 260,26)
+        self.venAvenue = PropertyTile(5, 260,27)
+        self.mGardens = PropertyTile(5, 280,29)
+        self.paAvenue = PropertyTile(6, 300,31)
+        self.nCAvenue = PropertyTile(6, 300,32)
+        self.peAvenue = PropertyTile(6, 320,34)
+        self.pPlace = PropertyTile(7, 350,37)
+        self.bw = PropertyTile(7, 400,39)
         self.properties = [self.mAvenue, self.bAvenue,
                         self.oAvenue, self.verAvenue, self.cAvenue,
                         self.sCPlace, self.sAvenue, self.viAvenue,
@@ -1134,19 +1223,19 @@ class MonopolyEnv(gym.Env):
 
         self.communityChest=CChestTile()
         self.chance = chanceTile()
-        self.electricCompany = UtilityTile()
-        self.waterWorks = UtilityTile()
+        self.electricCompany = UtilityTile(12)
+        self.waterWorks = UtilityTile(28)
         self.utilities = [self.electricCompany, self.waterWorks]
         self.utilitynames = ["Electric Company", "Water Works"]
-        self.rRailroad = RailroadTile()
-        self.pRailroad = RailroadTile()
-        self.bRailroad = RailroadTile()
-        self.sLine = RailroadTile()
+        self.rRailroad = RailroadTile(5)
+        self.pRailroad = RailroadTile(15)
+        self.bRailroad = RailroadTile(25)
+        self.sLine = RailroadTile(35)
         self.railroads = [self.rRailroad, self.pRailroad, self.bRailroad, self.sLine]
         self.railroadnames = ["Reading Railroad", "Pennsylvania Railroad", "B&O Railroad", "Short Line"]
 
         self.board = [Tile(), self.mAvenue, self.communityChest, self.bAvenue, Tile(), self.rRailroad, self.oAvenue, self.chance, self.verAvenue, self.cAvenue,
-                    Tile(), self.sCPlace, self.electricCompany, self.sAvenue, self.viAvenue, self.pRailroad, self.sJPlace, self.communityChest, self.tAvenue, self. nYAvenue,
+                    Tile(), self.sCPlace, self.electricCompany, self.sAvenue, self.viAvenue, self.pRailroad, self.sJPlace, self.communityChest, self.tAvenue, self.nYAvenue,
                     Tile(), self.kAvenue, self.chance, self.inAvenue, self.ilAvenue, self.bRailroad, self.aAvenue, self.venAvenue, self.waterWorks, self.mGardens,
                     Tile(), self.paAvenue, self.nCAvenue, self.communityChest, self.peAvenue, self.sLine, self.chance, self.pPlace, Tile(), self.bw]
 
@@ -1170,10 +1259,6 @@ class MonopolyEnv(gym.Env):
             logger.debug(f'GAME OVER')
         else:
             logger.debug(f"It is Player {self.current_player.playerSymbol}'s turn to move")
-            
-        logger.debug(' '.join([x.symbol for x in self.board[:self.grid_length]]))
-        logger.debug(' '.join([x.symbol for x in self.board[self.grid_length:self.grid_length*2]]))
-        logger.debug(' '.join([x.symbol for x in self.board[(self.grid_length*2):(self.grid_length*3)]]))
 
         if self.verbose:
             logger.debug(f'\nObservation: \n{self.observation}')
@@ -1182,100 +1267,258 @@ class MonopolyEnv(gym.Env):
             logger.debug(f'\nLegal actions: {[i for i,o in enumerate(self.legal_actions) if o != 0]}')
 
 
-#     def rules_move(self):
-#         if self.current_player.token.number == 1:
-#             b = [x.number for x in self.board]
-#         else:
-#             b = [-x.number for x in self.board]
+##### test move for win, how to change
+# def rules_move(self):
+#     if self.current_player.token.number == 1:
+#         b = [x.number for x in self.board]
+#     else:
+#         b = [-x.number for x in self.board]
 
-#         # Check computer win moves
-#         for i in range(0, self.num_squares):
-#             if b[i] == 0 and testWinMove(b, 1, i):
-#                 logger.debug('Winning move')
-#                 return self.create_action_probs(i)
-#         # Check player win moves
-#         for i in range(0, self.num_squares):
-#             if b[i] == 0 and testWinMove(b, -1, i):
-#                 logger.debug('Block move')
-#                 return self.create_action_probs(i)
-#         # Check computer fork opportunities
-#         for i in range(0, self.num_squares):
-#             if b[i] == 0 and testForkMove(b, 1, i):
-#                 logger.debug('Create Fork')
-#                 return self.create_action_probs(i)
-#         # Check player fork opportunities, incl. two forks
-#         playerForks = 0
-#         for i in range(0, self.num_squares):
-#             if b[i] == 0 and testForkMove(b, -1, i):
-#                 playerForks += 1
-#                 tempMove = i
-#         if playerForks == 1:
-#             logger.debug('Block One Fork')
-#             return self.create_action_probs(tempMove)
-#         elif playerForks == 2:
-#             for j in [1, 3, 5, 7]:
-#                 if b[j] == 0:
-#                     logger.debug('Block 2 Forks')
-#                     return self.create_action_probs(j)
-#         # Play center
-#         if b[4] == 0:
-#             logger.debug('Play Centre')
-#             return self.create_action_probs(4)
-#         # Play a corner
-#         for i in [0, 2, 6, 8]:
-#             if b[i] == 0:
-#                 logger.debug('Play Corner')
-#                 return self.create_action_probs(i)
-#         #Play a side
-#         for i in [1, 3, 5, 7]:
-#             if b[i] == 0:
-#                 logger.debug('Play Side')
-#                 return self.create_action_probs(i)
+#     # Check computer win moves
+#     for i in range(0, self.num_squares):
+#         if b[i] == 0 and testWinMove(b, 1, i):
+#             logger.debug('Winning move')
+#             return self.create_action_probs(i)
+#     # Check player win moves
+#     for i in range(0, self.num_squares):
+#         if b[i] == 0 and testWinMove(b, -1, i):
+#             logger.debug('Block move')
+#             return self.create_action_probs(i)
 
 
-#     def create_action_probs(self, action):
-#         action_probs = [0.01] * self.action_space.n
-#         action_probs[action] = 0.92
-#         return action_probs   
+# def create_action_probs(self, action):
+#   action_probs = [0.01] * self.action_space.n
+#   action_probs[action] = 0.92
+#   return action_probs   
+################## check
+def create_action_probs(self, action):
+    total_actions = self.action_space.n  
+    action_probs = [0.01] * total_actions
+
+    tile_index = action[0]
+    action_index = action[1]
+    
+    if 0 <= tile_index < len(self.legal_action):
+        tile_legal_actions = self.legal_action[tile_index]
+
+        if 0 <= action_index < len(tile_legal_actions):
+            action_probs[action_index] = 0.92
+
+    return action_probs
 
 
-# def checkWin(b, m):
-#     return ((b[0] == m and b[1] == m and b[2] == m) or  # H top
-#             (b[3] == m and b[4] == m and b[5] == m) or  # H mid
-#             (b[6] == m and b[7] == m and b[8] == m) or  # H bot
-#             (b[0] == m and b[3] == m and b[6] == m) or  # V left
-#             (b[1] == m and b[4] == m and b[7] == m) or  # V centre
-#             (b[2] == m and b[5] == m and b[8] == m) or  # V right
-#             (b[0] == m and b[4] == m and b[8] == m) or  # LR diag
-#             (b[2] == m and b[4] == m and b[6] == m))  # RL diag
+### b = board, mark = player
+def checkWin(b, m):
+  # worth of the other player (see if the other player bankrupts)
+  worth = self.checkworth(b,m)
+  if worth < 0:
+    return True
+  return False
 
+def checkworth(self, b, playern):
+  player = self.players[(0 if playern == 1 else 1)]
+  ca = player.cash
+  for ii in range(22):
+    if ii in [1,3,6,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]:
+      l = [1,3,6,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]
+      if player.mortgaged[l.index(ii)] == False and player.playerProperty[l.index(ii)][0] == True:
+        ca += b[ii].price
+        if player.playerProperty[l.index(ii)][1] != 0:
+          ca += (player.playerProperty[l.index(ii)][1] + player.playerProperty[l.index(ii)][2]) * b[ii].househotelCosts
+    if ii in [5,15,25,35]
+      l = [5,15,25,35]
+      if player.playerRailroad[l.index(ii)] == True:
+        ca += 200
+    if ii in [12,28]:
+      l = [12,28]
+      if player.playerUtilities[l.index(ii)] == True:
+        ca += 150
+  return ca
 
-# def checkDraw(b):
-#     return 0 not in b
+######## what is b
+def getBoardCopy(b):
+    # Make a duplicate of the board. When testing moves we don't want to 
+    # change the actual board
+    bmAvenue = self.copyproperty(1,b)
+    bbAvenue = self.copyproperty(3,b)
+    boAvenue = self.copyproperty(6,b)
+    bverAvenue = self.copyproperty(8,b)
+    bcAvenue = self.copyproperty(9,b)
+    bsCPlace = self.copyproperty(11,b)
+    bsAvenue = self.copyproperty(13,b)
+    bviAvenue = self.copyproperty(14,b)
+    bsJPlace = self.copyproperty(16,b)
+    btAvenue = self.copyproperty(18,b)
+    bnYAvenue = self.copyproperty(19,b)
+    bkAvenue = self.copyproperty(21,b)
+    binAvenue = self.copyproperty(23,b)
+    bilAvenue = self.copyproperty(24,b)
+    baAvenue = self.copyproperty(26,b)
+    bvenAvenue = self.copyproperty(27,b)
+    bmGardens = self.copyproperty(29,b)
+    bpaAvenue = self.copyproperty(31,b)
+    bnCAvenue = self.copyproperty(32,b)
+    bpeAvenue = self.copyproperty(34,b)
+    bpPlace = self.copyproperty(37,b)
+    bbw = self.copyproperty(39,b)
 
-# def getBoardCopy(b):
-#     # Make a duplicate of the board. When testing moves we don't want to 
-#     # change the actual board
-#     dupeBoard = []
-#     for j in b:
-#         dupeBoard.append(j)
-#     return dupeBoard
+    belectricCompany = self.copyutility(12,b)
+    bwaterWorks = self.copyproperty(28,b)
+    brRailroad = self.copyrailroad(5,b)
+    bpRailroad = self.copyrailroad(15,b)
+    bbRailroad = self.copyrailroad(25,b)
+    bsLine = self.copyrailroad(35,b)
 
+    dupeBoard = [Tile(), bmAvenue, self.communityChest, bbAvenue, Tile(), brRailroad, boAvenue, self.chance, bverAvenue, bcAvenue,
+                Tile(), bsCPlace, belectricCompany, bsAvenue, bviAvenue, bpRailroad, bsJPlace, self.communityChest, btAvenue, bnYAvenue,
+                Tile(), bkAvenue, self.chance, binAvenue, bilAvenue, bbRailroad, baAvenue, bvenAvenue, bwaterWorks, bmGardens,
+                Tile(), bpaAvenue, bnCAvenue, self.communityChest, bpeAvenue, bsLine, self.chance, bpPlace, Tile(), bbw]
+
+    return dupeBoard
+
+###############
 # def testWinMove(b, mark, i):
-#     # b = the board
-#     # mark = 0 or X
-#     # i = the square to check if makes a win 
-#     bCopy = getBoardCopy(b)
-#     bCopy[i] = mark
-#     return checkWin(bCopy, mark)
+    # # b = the board
+    # # mark = number of the player
+    # # i = the square to check if makes a win 
+    # bCopy = getBoardCopy(b)
+    # bCopy[i] = mark
+    # return checkWin(bCopy, mark)
+############## should the indexes stay the same? include no in the index?
+def testWinMove(b, mark, action):
+  # b = the board
+  # mark = number of the player
+  # action = the square to check if makes a win 
+  bCopy = getBoardCopy(b)
+  player = self.copyplayer(mark)
+
+  bproperties = [bCopy[x] for x in [1,3,6,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]]
+  bsets = [[bCopy[1], bCopy[3]],
+          [bCopy[6], bCopy[8], bCopy[9]],
+          [bCopy[11], bCopy[13], bCopy[14]],
+          [bCopy[16], bCopy[18], bCopy[19]],
+          [bCopy[21], bCopy[23], bCopy[24]],
+          [bCopy[26], bCopy[27], bCopy[29]],
+          [bCopy[31], bCopy[32], bCopy[34]],
+          [bCopy[37], bCopy[39]]]
+
+  butilities = [bCopy[12], bCopy[28]]
+  brailroads = [bCopy[x] for x in [5,15,25,35]]
+       
+  # railroad
+  if action[1] == 0 and action[0] in [5,15,25,35]:
+    railroad = bcopy[action[0]]
+    self.bankrupt(railroad.price, player.playerSymbol)
+    railroad.setOwner(player.playerSymbol)
+    player.addRailroad([5, 15, 25, 35].index(action[0]))
+  # utilities
+  if action[1] == 0 and action[0] in [12.28]:
+    utility = bCopy[action[0]]
+    self.bankrupt(utility.price, player.playerSymbol)
+    utility.setOwner(player.playerSymbol)
+    player.addUtilities([12, 28].index(action[0]))
+    if player.playerUtilities == [True, True]:
+      utility.setUtilities()
+  elif action[0] == 10 and action[1] == 0:
+    # roll dice
+    self.d1.randomnum()
+    self.d2.randomnum()
+    player.diceroll = self.d1.currentnum + self.d2.currentnum
+    if self.d1.currentnum != self.d2.currentnum:
+      player.diceJail += 1
+    else:
+      player.setJail()
+      player.setDiceJail(0)
+  elif action[0] == 10 and action[1] == 1:
+    # pay out of jail
+    self.bankrupt(-50, player.playerSymbol)
+    player.diceJail = 0
+  elif action[0] in [1,3,6,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]:
+    prop = bCopy[action[0]]
+    # buy property
+    if action[1] == 0:
+      self.bankrupt(-(prop.getPrice()), player.playerSymbol)
+      prop.setOwner(player.playerSymbol)
+      player.addProperty(bproperties.index(bCopy[action[0]]))
+      for s, owned in player.playerSets.items():
+        if owned == True:
+          for p in bsets[self.colors.index(s)]:
+            p.setColorSet()
+    if action[1] in [2,4]:
+      prop.setHouse()
+      player.earn(-(prop.househotelCosts))
+      player.addHouseHotel(bproperties.index(bCopy[action[0]]))
+    elif action[1] == 6:
+      self.bankrupt(bCopy[action[0]].mortgagedPayPrice, player.playerSymbol)
+      player.setMortgaged(bproperties.index(bCopy[action[0]]))
+      player.playerProperty[(bproperties.index(bCopy[action[0]])][0] = False
+      player.houseNum += player.playerProperty[(bproperties.index(bCopy[action[0]]))][1]
+      player.hotelNum += player.playerProperty[(bproperties.index(bCopy[action[0]]))][2]
+      bCopy[action[0]].mortgaged = False
+
+    return checkWin(bCopy, mark)
 
 
-# def testForkMove(b, mark, i):
-#     # Determines if a move opens up a fork
-#     bCopy = getBoardCopy(b)
-#     bCopy[i] = mark
-#     winningMoves = 0
-#     for j in range(0, 9):
-#         if testWinMove(bCopy, mark, j) and bCopy[j] == 0:
-#             winningMoves += 1
-#     return winningMoves >= 2
+def copyplayer(self, playern):
+  player = self.players[playern]
+  bplayer = Player(player.playerSymbol, plauer.name)
+  bplayer.position = player.position
+  bplayer.rollingdoubles = player.rollingdoubles
+  bplayer.turn = player.turn
+  bplayer.move = player.move
+  bplayer.b = player.b
+  bplayer.cash = player.cash
+  bplayer.jail = player.jail
+  bplayer.diceJail = player.diceJail
+  bplayer.wasJailed = player.wasJailed
+  bplayer.playerProperty = player.playerProperty
+  bplayer.houseNum = player.houseNu
+  bplayer.hotelNum = player.hotelNum
+  bplayer.playerSets = player.playerSets
+  bplayer.playerRailroad = player.playerRailroad
+  bplayer.railroadNum = player.railroadNum
+  bplayer.playerUtilities = player.playerUtilities
+  bplayer.utilitiesNum = player.utilitiesNum
+  bplayer.mortgaged = player.mortgaged
+  bplayer.freeJail = player.freeJail
+  return bplayer
+
+def copyproperty(self, tilen, b):
+  prop = b[tilen]
+  bprop = PropertyTile(prop.color, prop.price, prop.position)
+  bprop.hasPiece = prop.hasPiece
+  bprop.pieceType = prop.pieceType
+  bprop.once = prop.once
+  bprop.occupied = prop.occupied
+  bprop.rent = prop.rent
+  bprop.rentWOneHouse = prop.rentWOneHouse
+  bprop.house = prop.house
+  bprop.hotel = prop.hotel
+  bprop.hhcosts = prop.hhcosts
+  bprop.househotelCosts = prop.househotelCosts
+  bprop.colorset = prop.colorset
+  bprop.mortgaged = prop.mortgaged
+  bprop.mortgageprice = prop.mortgageprice
+  bprop.mortgagedPayPrice = prop.mortgagedPayPrice
+  bprop.diceroll = prop.diceroll
+  return bprop
+
+def copyrailroad(self, tilen, b):
+  railroad = b[tilen]
+  brailroad = RailroadTile(tilen)
+  brailroad.hasPiece = railroad.hasPiece
+  brailroad.pieceType = railroad.pieceType
+  brailroad.occupied = railroad.occupied
+  brailroad.price = railroad.price
+  brailroad.rent = railroad.rent
+  brailroad.totalRailroad = railroad.totalRailroad
+  return brailroad
+
+def copyutility(self, tilen, b):
+  utility = b[tilen]
+  butility = UtilityTile(tilen)
+  butility.hasPiece = utility.hasPiece
+  butility.pieceType = utility.pieceType
+  butility.occupied = utility.occupied
+  butility.price = utility.price
+  butility.utilities = utility.utilities
