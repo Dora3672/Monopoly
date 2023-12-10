@@ -1335,7 +1335,6 @@ def checkworth(self, b, playern):
         ca += 150
   return ca
 
-######## what is b
 def getBoardCopy(b):
     # Make a duplicate of the board. When testing moves we don't want to 
     # change the actual board
