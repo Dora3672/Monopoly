@@ -983,7 +983,40 @@ class MonopolyEnv(gym.Env):
     def legal_actions(self):
         current_player = self.current_player
         legal_actions = []
+        # buy MA (0), not buy MA (1), buy house (2), not buy house (3), buy hotel (4), not buy hotel (5), buy back (6), not buy back (7),
+        # buy BA (8), not buy BA (9), buy house (10), not buy house (11), buy hotel (12), not buy hotel (13), buy back (14), not buy back (15),
+        # buy RR (16), not buy RR (17),
+        # buy OA (18), not buy OA (19), buy house (20), not buy house (21), buy hotel (22), not buy hotel (23), buy back (24), not buy back (25),
+        # buy VerA (26), not buy (27), buy house (28), not buy house (29), buy hotel (30), not buy hotel (31), buy back (32), not buy back (33),
+        # buy SA (34), not buy (35), buy house (36), not buy house (37), buy hotel (38), not buy hotel (39), buy back (40), not buy back (41),
+        # roll dice free jail (42), pay jail (43),
+        # buy SCP (44), not buy (45), buy house (46), not buy house (47), buy hotel (48), not buy hotel (49), buy back (50), not buy back (51),
+        # buy EC (52), not buy (53),
+        # buy SA (54), not buy (55), buy house (56), not buy house (57), buy hotel (58), not buy hotel (59), buy back (60), not buy back (61),
+        # buy ViA (62), not buy (63), buy house (64), not buy house (65), buy hotel (66), not buy hotel (67), buy back (68), not buy back (69),
+        # buy PR (70), not buy (71),
+        # buy SJP (72), not buy (73), buy house (74), not buy house (75), buy hotel (76), not buy hotel (77), buy back (78), not buy back (79),
+        # buy TA (80), not buy (81), buy house (82), not buy house (83), buy hotel (84), not buy hotel (85), buy back (86), not buy back (87),
+        # buy NYA (88), not buy (89), buy house (90), not buy house (91), buy hotel (92), not buy hotel (93), buy back (94), not buy back (95),
+        # buy KA (96), not buy (97), buy house (98), not buy house (99), buy hotel (100), not buy hotel (101), buy back (102), not buy back (103),
+        # buy InA (104), not buy (105), buy house (106), not buy house (107), buy hotel (108), not buy hotel (109), buy back (110), not buy back (111),
+        # buy IlA (112), not buy (113), buy house (114), not buy house (115), buy hotel (116), not buy hotel (117), buy back (118), not buy back (119),
+        # buy BOR (120), not buy (121),
+        # buy AA (122), not buy (123), buy house (124), not buy house (125), buy hotel (126), not buy hotel (127), buy back (128), not buy back (129),
+        # buy VenA (130), not buy (131), buy house (132), not buy house (133), buy hotel (134), not buy hotel (135), buy back (136), not buy back (137),
+        # buy WW (138), not buy (139),
+        # buy MG (140), not buy (141), buy house (142), not buy house (143), buy hotel (144), not buy hotel (145), buy back (146), not buy back (147),
+        # buy PaA (148), not buy (149), buy house (150), not buy house (151), buy hotel (152), not buy hotel (153), buy back (154), not buy back (155),
+        # buy NCA (156), not buy (157), buy house (158), not buy house (159), buy hotel (160), not buy hotel (161), buy back (162), not buy back (163),
+        # buy PeA (164), not buy (165), buy house (166), not buy house (167), buy hotel (168), not buy hotel (169), buy back (170), not buy back (171),
+        # buy SLR (172), not buy (173),
+        # buy PP (174), not buy (175), buy house (176), not buy house (177), buy hotel (178), not buy hotel (179), buy back (180), not buy back (181),
+        # buy B (182), not buy (183), buy house (184), not buy house (185), buy hotel (186), not buy hotel (187), buy back (188), not buy back (189),
+        # nothing (190)
+
         
+
+
         # Iterate through properties
         for index, tile in enumerate(self.board):
             # railroads
@@ -1041,6 +1074,8 @@ class MonopolyEnv(gym.Env):
             nothing = False
         
         legal_actions.append([0] if nothing == False else [1])
+
+        legal_actions.flatten()
 
         return legal_actions
 
@@ -1147,7 +1182,7 @@ class MonopolyEnv(gym.Env):
                 self.current_player.earn(-(prop.househotelCosts))
                 self.current_player.addHouseHotel(self.properties.index(self.board[action[0]]))
               elif action[1] == 6:
-                self.bankrupt(self.board[action[0]].mortgagedPayPrice, self.current_player.playerSymbol)
+                self.bankrupt(-self.board[action[0]].mortgagedPayPrice, self.current_player.playerSymbol)
                 self.current_player.setMortgaged(self.properties.index(self.board[action[0]]))
                 self.current_player.playerProperty[(self.properties.index(self.board[action[0]])][0] = False
                 self.current_player.houseNum += self.current_player.playerProperty[(self.properties.index(self.board[action[0]]))][1]
@@ -1269,11 +1304,6 @@ class MonopolyEnv(gym.Env):
 
 ##### test move for win, how to change
 # def rules_move(self):
-#     if self.current_player.token.number == 1:
-#         b = [x.number for x in self.board]
-#     else:
-#         b = [-x.number for x in self.board]
-
 #     # Check computer win moves
 #     for i in range(0, self.num_squares):
 #         if b[i] == 0 and testWinMove(b, 1, i):
@@ -1284,26 +1314,25 @@ class MonopolyEnv(gym.Env):
 #         if b[i] == 0 and testWinMove(b, -1, i):
 #             logger.debug('Block move')
 #             return self.create_action_probs(i)
+def rules_move(self):
+  #for all tiles in the board
+  #check computer win
+    # use the function previously made for creating legal actions, go through and test for win
+
+  # check player win
+    #use the function previously made for creating legal actions, go through and test for win
+    # if player can win, block move
 
 
-# def create_action_probs(self, action):
-#   action_probs = [0.01] * self.action_space.n
-#   action_probs[action] = 0.92
-#   return action_probs   
-################## check
 def create_action_probs(self, action):
     total_actions = self.action_space.n  
     action_probs = [0.01] * total_actions
-
-    tile_index = action[0]
-    action_index = action[1]
     
-    if 0 <= tile_index < len(self.legal_action):
-        tile_legal_actions = self.legal_action[tile_index]
+    if 0 <= tile_index < 40:
+      action_probs[action_index] = 0.92
 
-        if 0 <= action_index < len(tile_legal_actions):
-            action_probs[action_index] = 0.92
-
+    #### how to change this? it seems as the index num for the tile is important
+    
     return action_probs
 
 
@@ -1384,6 +1413,7 @@ def getBoardCopy(b):
     # bCopy[i] = mark
     # return checkWin(bCopy, mark)
 ############## should the indexes stay the same? include no in the index?
+# action = 1 number -> legal action flattened array (include not moving)
 def testWinMove(b, mark, action):
   # b = the board
   # mark = number of the player
@@ -1405,20 +1435,9 @@ def testWinMove(b, mark, action):
   brailroads = [bCopy[x] for x in [5,15,25,35]]
        
   # railroad
-  if action[1] == 0 and action[0] in [5,15,25,35]:
-    railroad = bcopy[action[0]]
-    self.bankrupt(railroad.price, player.playerSymbol)
-    railroad.setOwner(player.playerSymbol)
-    player.addRailroad([5, 15, 25, 35].index(action[0]))
-  # utilities
-  if action[1] == 0 and action[0] in [12.28]:
-    utility = bCopy[action[0]]
-    self.bankrupt(utility.price, player.playerSymbol)
-    utility.setOwner(player.playerSymbol)
-    player.addUtilities([12, 28].index(action[0]))
-    if player.playerUtilities == [True, True]:
-      utility.setUtilities()
-  elif action[0] == 10 and action[1] == 0:
+  if action == 190:
+    pass
+  elif action == 42:
     # roll dice
     self.d1.randomnum()
     self.d2.randomnum()
@@ -1428,32 +1447,53 @@ def testWinMove(b, mark, action):
     else:
       player.setJail()
       player.setDiceJail(0)
-  elif action[0] == 10 and action[1] == 1:
+  elif action == 43: 
     # pay out of jail
     self.bankrupt(-50, player.playerSymbol)
     player.diceJail = 0
-  elif action[0] in [1,3,6,8,9,11,13,14,16,18,19,21,23,24,26,27,29,31,32,34,37,39]:
-    prop = bCopy[action[0]]
+  elif action in [16,70,120,172]:
+    # railroad
+    railroad = brailroads[[16,70,120,172].index(action)]
+    self.bankrupt(railroad.price, player.playerSymbol)
+    railroad.setOwner(player.playerSymbol)
+    player.addRailroad([16,70,120,172].index(action))
+  elif action in [52,138]:
+    # utility
+    utility = butilities[[52,138].index(action)]
+    self.bankrupt(utility.price, player.playerSymbol)
+    utility.setOwner(player.playerSymbol)
+    player.addUtilities([52,138].index(action))
+    if player.playerUtilities == [True, True]:
+      utility.setUtilities()
+  elif action in [0,8,18,26,34,44,54,62,72,80,88,96,104,112,122,130,140,148,156,164,174,182]
     # buy property
-    if action[1] == 0:
-      self.bankrupt(-(prop.getPrice()), player.playerSymbol)
-      prop.setOwner(player.playerSymbol)
-      player.addProperty(bproperties.index(bCopy[action[0]]))
-      for s, owned in player.playerSets.items():
-        if owned == True:
-          for p in bsets[self.colors.index(s)]:
-            p.setColorSet()
-    if action[1] in [2,4]:
-      prop.setHouse()
-      player.earn(-(prop.househotelCosts))
-      player.addHouseHotel(bproperties.index(bCopy[action[0]]))
-    elif action[1] == 6:
-      self.bankrupt(bCopy[action[0]].mortgagedPayPrice, player.playerSymbol)
-      player.setMortgaged(bproperties.index(bCopy[action[0]]))
-      player.playerProperty[(bproperties.index(bCopy[action[0]])][0] = False
-      player.houseNum += player.playerProperty[(bproperties.index(bCopy[action[0]]))][1]
-      player.hotelNum += player.playerProperty[(bproperties.index(bCopy[action[0]]))][2]
-      bCopy[action[0]].mortgaged = False
+    prop = bproperties[[0,8,18,26,34,44,54,62,72,80,88,96,104,112,122,130,140,148,156,164,174,182].index(action)]
+    self.bankrupt(-(prop.getPrice()), player.playerSymbol)
+    prop.setOwner(player.playerSymbol)
+    player.addProperty([0,8,18,26,34,44,54,62,72,80,88,96,104,112,122,130,140,148,156,164,174,182].index(action))
+    for s, owned in player.playerSets.items():
+      if owned == True:
+        for p in bsets[self.colors.index(s)]:
+          p.setColorSet()
+  elif action in [x+2 for x in [0,8,18,26,34,44,54,62,72,80,88,96,104,112,122,130,140,148,156,164,174,182]]:
+    prop = bproperties[[x+2 for x in [0,8,18,26,34,44,54,62,72,80,88,96,104,112,122,130,140,148,156,164,174,182]].index(action)]
+    prop.setHouse()
+    player.earn(-(prop.househotelCosts))
+    player.addHouseHotel([x+2 for x in [0,8,18,26,34,44,54,62,72,80,88,96,104,112,122,130,140,148,156,164,174,182]].index(action))
+  elif action in [x+4 for x in [0,8,18,26,34,44,54,62,72,80,88,96,104,112,122,130,140,148,156,164,174,182]]
+    prop = bproperties[[x+4 for x in [0,8,18,26,34,44,54,62,72,80,88,96,104,112,122,130,140,148,156,164,174,182]].index(action)]
+    prop.setHouse()
+     player.earn(-(prop.househotelCosts))
+    player.addHouseHotel([x+4 for x in [0,8,18,26,34,44,54,62,72,80,88,96,104,112,122,130,140,148,156,164,174,182]].index(action))
+  elif action in [x+6 for x in [0,8,18,26,34,44,54,62,72,80,88,96,104,112,122,130,140,148,156,164,174,182]]
+    index = [x+6 for x in [0,8,18,26,34,44,54,62,72,80,88,96,104,112,122,130,140,148,156,164,174,182]].index(action)
+    prop = bproperties[index]
+    self.bankrupt(-prop.mortgagedPayPrice, player.playerSymbol)
+    player.setMortgaged(index)
+    player.playerProperty[index][0] = False
+    player.houseNum += player.playerProperty[index][1]
+    player.hotelNum += player.playerProperty[index][2]
+    prop.mortgaged = False
 
     return checkWin(bCopy, mark)
 
