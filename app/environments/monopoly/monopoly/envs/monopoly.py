@@ -1324,16 +1324,10 @@ def rules_move(self):
     # if player can win, block move
 
 
-def create_action_probs(self, action):
-    total_actions = self.action_space.n  
-    action_probs = [0.01] * total_actions
-    
-    if 0 <= tile_index < 40:
-      action_probs[action_index] = 0.92
-
-    #### how to change this? it seems as the index num for the tile is important
-    
-    return action_probs
+ def create_action_probs(self, action):
+        action_probs = [0.01] * self.action_space.n
+        action_probs[action] = 0.92
+        return action_probs
 
 
 ### b = board, mark = player
